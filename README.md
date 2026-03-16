@@ -17,9 +17,10 @@ Aplicación de gestión de gimnasio en CLI usando Python y PostgreSQL.
 Crear una base de datos y usuario, por ejemplo:
 
 ```sql
-CREATE DATABASE gymdb;
 CREATE USER gymuser WITH PASSWORD 'gympass';
+CREATE DATABASE gymdb OWNER gymuser;
 GRANT ALL PRIVILEGES ON DATABASE gymdb TO gymuser;
+\q
 ```
 
 Configura las variables de entorno (por ejemplo en un archivo `.env` en la raíz del proyecto):
