@@ -2,6 +2,24 @@
 
 Aplicación de gestión de gimnasio en CLI usando Python y PostgreSQL.
 
+## Modelo de arquitectura de software
+
+Se ha implementado una **arquitectura en capas** (Layered Architecture / N-tier) con **patrón Repository** y **capa de servicio**:
+
+| Capa | Módulo(s) | Responsabilidad |
+|------|-----------|------------------|
+| **Presentación** | `cli.py`, `colors.py` | Interfaz de usuario (menú, entradas, mensajes). No contiene lógica de negocio. |
+| **Aplicación / Servicio** | `service.py` | Orquesta los casos de uso, aplica reglas de negocio (cupo, choques de horario, validaciones) y delega la persistencia en el repositorio. |
+| **Dominio** | `models.py` | Entidades del negocio (`Trainer`, `Member`, `GymClass`). Solo datos, sin lógica. |
+| **Acceso a datos** | `repository.py` | **Patrón Repository**: abstrae el almacenamiento en PostgreSQL (CRUD, consultas). El servicio no conoce SQL. |
+| **Infraestructura** | `db.py`, `config.py` | Conexión a BD, configuración y creación del esquema. |
+
+**Flujo de dependencias:** la dependencia va siempre hacia dentro (hacia el dominio y la infraestructura). La presentación depende del servicio; el servicio depende del repositorio y de los modelos; el repositorio depende de la BD y de los modelos. Así se puede cambiar la interfaz (por ejemplo pasar de CLI a API REST) o el almacenamiento (por ejemplo otro motor de BD) sin reescribir la lógica de negocio.
+
+**Patrones utilizados:**
+- **Repository**: `repository.py` actúa como fachada del almacenamiento; el servicio trabaja con entidades y operaciones de alto nivel.
+- **Service layer**: `service.py` concentra la lógica de aplicación y las validaciones, dejando la presentación “tonta” y el repositorio solo como persistencia.
+
 ## Estructura de módulos (diseño técnico)
 
 - `config.py`
