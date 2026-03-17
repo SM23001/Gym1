@@ -81,20 +81,13 @@ Se ha implementado una **arquitectura en capas** (Layered Architecture / N-tier)
     - Traduce la entrada del usuario (strings) a tipos adecuados (enteros, horas) y delega en funciones de `service`.
     - Captura `BusinessError` y `ValueError` para mostrar mensajes claros al usuario y no interrumpir la aplicación.
 
+- `conftest.py`
+  - **Responsabilidad**: configuración global de pytest.
+  - Añade la raíz del proyecto al `sys.path` para que los imports (`db`, `service`, `repository`, etc.) funcionen al ejecutar `pytest` desde la raíz del proyecto.
+
 - `tests/`
-  - **Responsabilidad**: validar casos críticos de la lógica de negocio.
-  - Se usa `pytest`.
-  - `tests/test_service.py`:
-    - Fixture `clean_db`:
-      - Llama a `init_schema()` y después hace `TRUNCATE` de todas las tablas relevantes, reiniciando los `SERIAL` para que los IDs sean predecibles en cada test.
-    - `test_enroll_member_capacity_and_overlap`:
-      - Verifica que:
-        - Se puede inscribir un miembro en una clase con cupo disponible.
-        - No se puede inscribir un segundo miembro cuando el cupo está completo.
-        - El mismo miembro no puede inscribirse en otra clase que se solapa en horario el mismo día.
-    - `test_mark_attendance_requires_enrollment`:
-      - Impide marcar asistencia si el miembro no está inscrito.
-      - Permite marcar asistencia si el miembro está inscrito y verifica que se generó un registro en la tabla `attendance`.
+  - **Responsabilidad**: validar casos críticos de la lógica de negocio (capa de servicio y persistencia).
+  - Ver sección [Tests](#tests) más abajo para detalles.
 
 ## Configuración de PostgreSQL
 
@@ -133,11 +126,55 @@ python cli.py
 
 La primera ejecución crea las tablas necesarias en la base de datos.
 
-## Ejecutar tests unitarios
+## Tests
+
+Los tests comprueban la lógica de negocio y el uso del repositorio contra una base PostgreSQL real (la misma configurada en `.env` o por defecto).
+
+### Requisitos
+
+- PostgreSQL en marcha y accesible con la misma configuración que la aplicación.
+- Dependencias instaladas (`pip install -r requirements.txt` incluye `pytest`).
+
+### Configuración de pytest: `conftest.py`
+
+En la raíz del proyecto, `conftest.py`:
+
+- Inserta la raíz del proyecto en `sys.path` para que, al ejecutar `pytest`, los módulos `db`, `service`, `repository`, etc. se importen correctamente sin instalar el proyecto como paquete.
+
+### Estructura de tests
+
+| Archivo | Contenido |
+|---------|-----------|
+| `tests/test_service.py` | Tests de la capa de servicio (inscripción, cupo, horarios, asistencia). |
+
+### Fixtures
+
+- **`clean_db`** (autouse): se ejecuta antes de cada test.
+  - Llama a `init_schema()` para asegurar que las tablas existen.
+  - Ejecuta `TRUNCATE attendance, enrollments, classes, members, trainers RESTART IDENTITY` para dejar la BD limpia y con IDs predecibles en cada test.
+
+### Casos de prueba
+
+| Test | Qué valida |
+|------|------------|
+| **`test_enroll_member_capacity_and_overlap`** | Inscripción: un miembro se inscribe correctamente en una clase con cupo; un segundo miembro no puede inscribirse si el cupo está lleno (`BusinessError` "Cupo completo"); el mismo miembro no puede inscribirse en otra clase que se solapa en horario el mismo día (`BusinessError` "Choque de horario"). |
+| **`test_mark_attendance_requires_enrollment`** | Asistencia: no se puede marcar asistencia si el miembro no está inscrito (`BusinessError`); tras inscribir al miembro, se puede marcar asistencia y se comprueba que existe al menos un registro en la tabla `attendance` para esa clase y miembro. |
+
+### Cómo ejecutar los tests
+
+Desde la raíz del proyecto (con el venv activado):
 
 ```bash
 pytest
 ```
 
-Cuidado: los tests limpian todas las tablas del esquema usado (TRUNCATE).
+Opciones útiles:
+
+```bash
+pytest -v                  # salida verbose (nombre de cada test)
+pytest tests/test_service.py   # solo tests del servicio
+pytest -k "attendance"      # solo tests cuyo nombre contiene "attendance"
+```
+
+**Importante:** los tests usan la misma base de datos que la aplicación y hacen `TRUNCATE` de las tablas antes de cada test. No ejecutes los tests sobre una base con datos que quieras conservar, o usa una base dedicada (por ejemplo `GYM_DB_NAME=gymdb_test`).
 
