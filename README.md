@@ -1,5 +1,41 @@
 # Gym1
 
+## Cómo ejecutar la aplicación
+
+1. **Clona el repositorio y navega a la carpeta:**
+
+    ```bash
+    cd /home/verscomp/Cursor/Pruebas/Gym1
+    ```
+
+2. **Activa el entorno virtual:**
+
+    ```bash
+    source .venv/bin/activate
+    ```
+
+    *(Crea el entorno si es necesario: `python -m venv .venv` e instala las dependencias con `pip install -r requirements.txt`)*
+
+3. **Ejecuta la aplicación CLI:**
+
+    ```bash
+    python cli.py
+    ```
+
+4. **Sigue las instrucciones del menú para operar el sistema de gestión de gimnasio.**
+
+
+
+
+
+
+
+
+
+
+
+
+
 Aplicación de gestión de gimnasio en CLI usando Python y PostgreSQL.
 
 ## Modelo de arquitectura de software

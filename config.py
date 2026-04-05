@@ -24,7 +24,7 @@ class Settings:
 
 def get_settings() -> Settings:
     return Settings(
-        db_host=os.getenv("GYM_DB_HOST", "192.168.1.10"),
+        db_host=os.getenv("GYM_DB_HOST", "192.168.1.34"),
         db_port=int(os.getenv("GYM_DB_PORT", "5432")),
         db_name=os.getenv("GYM_DB_NAME", "gymdb"),
         db_user=os.getenv("GYM_DB_USER", "gymuser"),
