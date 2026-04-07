@@ -2,7 +2,7 @@
 
 ## Cómo ejecutar la aplicación - 1 -2 -2 -3
 ## Cómo ejecutar la aplicación - 1 -2
-## Cómo ejecutar la aplicación - 4
+## Cómo ejecutar la aplicación - 4 -5
 
 1. **Clona el repositorio y navega a la carpeta:**
 
