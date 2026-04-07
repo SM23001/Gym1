@@ -1,6 +1,6 @@
 # Gym1
 
-## Cómo ejecutar la aplicación - 1
+## Cómo ejecutar la aplicación - 1 -2
 
 1. **Clona el repositorio y navega a la carpeta:**
 
