@@ -1,38 +1,38 @@
 # Gym1
 
-Sistema de gestión de gimnasio por **línea de comandos (CLI)** en Python, con persistencia en **PostgreSQL**. Permite dar de alta entrenadores, miembros y clases; inscribir miembros respetando **cupo** y **choques de horario**; registrar **asistencia**; y listar clases.
+A **command-line (CLI)** gym management system in Python with **PostgreSQL** persistence. It supports creating trainers, members, and classes; enrolling members while enforcing **capacity** and **schedule conflicts**; recording **attendance**; and listing classes.
 
 **Stack:** Python 3, `psycopg2`, `python-dotenv`, `pytest`.
 
 ---
 
-## Tabla de contenidos
+## Table of contents
 
-1. [Requisitos previos](#requisitos-previos)
-2. [Inicio rápido](#inicio-rápido)
-3. [Configuración de PostgreSQL](#configuración-de-postgresql)
-4. [Variables de entorno](#variables-de-entorno)
-5. [Instalación](#instalación)
-6. [Ejecutar la aplicación](#ejecutar-la-aplicación)
-7. [Modelo de arquitectura](#modelo-de-arquitectura-de-software)
-8. [Estructura de módulos](#estructura-de-módulos-diseño-técnico)
+1. [Prerequisites](#prerequisites)
+2. [Quick start](#quick-start)
+3. [PostgreSQL setup](#postgresql-setup)
+4. [Environment variables](#environment-variables)
+5. [Installation](#installation)
+6. [Running the application](#running-the-application)
+7. [Software architecture model](#software-architecture-model)
+8. [Module structure (technical design)](#module-structure-technical-design)
 9. [Tests](#tests)
 
 ---
 
-## Requisitos previos
+## Prerequisites
 
-- **Python 3** (recomendado 3.10+)
-- **PostgreSQL** accesible desde la máquina donde corre la app
-- Cliente `psql` o herramienta equivalente para crear usuario y base de datos (opcional pero útil)
+- **Python 3** (3.10+ recommended)
+- **PostgreSQL** reachable from the machine where the app runs
+- The `psql` client or an equivalent tool to create users and databases (optional but useful)
 
 ---
 
-## Inicio rápido
+## Quick start
 
-1. Clona el repositorio y entra en la carpeta del proyecto.
+1. Clone the repository and change into the project directory.
 
-2. Crea y activa un entorno virtual, e instala dependencias:
+2. Create and activate a virtual environment, then install dependencies:
 
    ```bash
    python -m venv .venv
@@ -40,25 +40,25 @@ Sistema de gestión de gimnasio por **línea de comandos (CLI)** en Python, con 
    pip install -r requirements.txt
    ```
 
-3. Crea la base de datos y el usuario en PostgreSQL (ver [Configuración de PostgreSQL](#configuración-de-postgresql)).
+3. Create the database and user in PostgreSQL (see [PostgreSQL setup](#postgresql-setup)).
 
-4. Crea un archivo `.env` en la raíz con las variables `GYM_DB_*` (ver [Variables de entorno](#variables-de-entorno)), o confía en los valores por defecto de `config.py` si encajan con tu entorno.
+4. Add a `.env` file at the project root with the `GYM_DB_*` variables (see [Environment variables](#environment-variables)), or rely on the defaults in `config.py` if they match your environment.
 
-5. Ejecuta la CLI:
+5. Run the CLI:
 
    ```bash
    python cli.py
    ```
 
-   La primera ejecución crea las tablas necesarias (`init_schema`).
+   The first run creates the required tables (`init_schema`).
 
-6. Usa el menú interactivo para operar el sistema.
+6. Use the interactive menu to operate the system.
 
 ---
 
-## Configuración de PostgreSQL
+## PostgreSQL setup
 
-Ejemplo de creación de usuario y base de datos:
+Example user and database creation:
 
 ```sql
 CREATE USER gymuser WITH PASSWORD 'gympass';
@@ -67,33 +67,33 @@ GRANT ALL PRIVILEGES ON DATABASE gymdb TO gymuser;
 \q
 ```
 
-Ajusta nombres y contraseñas según tu política de seguridad.
+Adjust names and passwords to match your security policy.
 
 ---
 
-## Variables de entorno
+## Environment variables
 
-Puedes definirlas en un archivo `.env` en la raíz del proyecto (cargado automáticamente con `python-dotenv`).
+You can define them in a `.env` file at the project root (loaded automatically with `python-dotenv`).
 
-| Variable | Descripción |
+| Variable | Description |
 |----------|-------------|
-| `GYM_DB_HOST` | Host del servidor PostgreSQL |
-| `GYM_DB_PORT` | Puerto (numérico) |
-| `GYM_DB_NAME` | Nombre de la base de datos |
-| `GYM_DB_USER` | Usuario |
-| `GYM_DB_PASSWORD` | Contraseña |
+| `GYM_DB_HOST` | PostgreSQL server host |
+| `GYM_DB_PORT` | Port (numeric) |
+| `GYM_DB_NAME` | Database name |
+| `GYM_DB_USER` | Username |
+| `GYM_DB_PASSWORD` | Password |
 
-**Valores por defecto** si no defines las variables (ver `config.py`):
+**Default values** when variables are unset (see `config.py`):
 
-| Variable | Por defecto |
-|----------|-------------|
+| Variable | Default |
+|----------|---------|
 | `GYM_DB_HOST` | `192.168.1.34` |
 | `GYM_DB_PORT` | `5432` |
 | `GYM_DB_NAME` | `gymdb` |
 | `GYM_DB_USER` | `gymuser` |
 | `GYM_DB_PASSWORD` | `gympass` |
 
-Ejemplo de `.env` para desarrollo local:
+Example `.env` for local development:
 
 ```bash
 GYM_DB_HOST=localhost
@@ -105,119 +105,119 @@ GYM_DB_PASSWORD=gympass
 
 ---
 
-## Instalación
+## Installation
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-# En Windows: .venv\Scripts\activate
+# On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Dependencias principales (`requirements.txt`):
+Main dependencies (`requirements.txt`):
 
-- `psycopg2-binary` — cliente PostgreSQL
-- `python-dotenv` — carga de `.env`
+- `psycopg2-binary` — PostgreSQL client
+- `python-dotenv` — `.env` loading
 - `pytest` — tests
 
 ---
 
-## Ejecutar la aplicación
+## Running the application
 
 ```bash
 source .venv/bin/activate
 python cli.py
 ```
 
-El menú incluye, entre otras opciones:
+The menu includes, among other options:
 
-1. Alta de entrenador  
-2. Alta de miembro  
-3. Alta de clase (día, horario, cupo)  
-4. Inscribir miembro en clase  
-5. Registrar asistencia  
-6. Listar clases  
+1. Register trainer  
+2. Register member  
+3. Register class (day, time slot, capacity)  
+4. Enroll member in class  
+5. Record attendance  
+6. List classes  
 
-Los errores de reglas de negocio se muestran como mensajes claros (`BusinessError`, validaciones de entrada) sin tumbar la aplicación.
-
----
-
-## Modelo de arquitectura de software
-
-Arquitectura en **capas** (N-tier) con **Repository** y **capa de servicio**:
-
-| Capa | Módulo(s) | Responsabilidad |
-|------|-----------|------------------|
-| **Presentación** | `cli.py`, `colors.py` | Menú, entradas y salida. `colors.py` define códigos ANSI y el helper `c()` para texto coloreado. Sin lógica de negocio. |
-| **Aplicación / Servicio** | `service.py` | Casos de uso, reglas (cupo, choques de horario, validaciones) y delegación al repositorio. |
-| **Dominio** | `models.py` | Entidades (`Trainer`, `Member`, `GymClass`) como dataclasses; solo datos. |
-| **Acceso a datos** | `repository.py` | Patrón Repository sobre PostgreSQL (CRUD y consultas). El servicio no escribe SQL. |
-| **Infraestructura** | `db.py`, `config.py` | Conexión, configuración y creación del esquema. |
-
-**Flujo de dependencias:** la presentación depende del servicio; el servicio del repositorio y los modelos; el repositorio de la BD y los modelos. Así se puede cambiar la interfaz (por ejemplo a una API) o el motor de datos sin reescribir toda la lógica.
-
-**Patrones:**
-
-- **Repository:** `repository.py` como fachada de persistencia.  
-- **Service layer:** `service.py` concentra la lógica de aplicación; la CLI permanece delgada.
+Business-rule errors are shown as clear messages (`BusinessError`, input validation) without crashing the application.
 
 ---
 
-## Estructura de módulos (diseño técnico)
+## Software architecture model
 
-- **`config.py`** — Configuración de BD con `python-dotenv`. Clase `Settings` (`db_host`, `db_port`, `db_name`, `db_user`, `db_password`, propiedad `dsn`). Función `get_settings()` usada desde `db.py`.
+**Layered** (N-tier) architecture with the **Repository** pattern and a **service layer**:
 
-- **`db.py`** — Conexión PostgreSQL. `get_connection()` como context manager (commit/rollback). `init_schema()` crea las tablas `trainers`, `members`, `classes`, `enrollments` y `attendance` si no existen. Se invoca al arrancar la CLI y en los tests.
+| Layer | Module(s) | Responsibility |
+|------|-----------|----------------|
+| **Presentation** | `cli.py`, `colors.py` | Menu, input, and output. `colors.py` defines ANSI codes and the `c()` helper for colored text. No business logic. |
+| **Application / Service** | `service.py` | Use cases, rules (capacity, schedule conflicts, validations), and delegation to the repository. |
+| **Domain** | `models.py` | Entities (`Trainer`, `Member`, `GymClass`) as dataclasses; data only. |
+| **Data access** | `repository.py` | Repository pattern on PostgreSQL (CRUD and queries). The service does not write SQL. |
+| **Infrastructure** | `db.py`, `config.py` | Connection, configuration, and schema creation. |
 
-- **`models.py`** — `Trainer`, `Member`, `GymClass` como `@dataclass` con tipos estáticos.
+**Dependency flow:** presentation depends on the service; the service depends on the repository and models; the repository depends on the database and models. That way you can swap the interface (e.g. to a REST API) or the storage engine without rewriting all business logic.
 
-- **`repository.py`** — Persistencia: `create_trainer`, `create_member`, `create_class`, `get_*`, `list_classes`, métricas (`count_enrollments`, `is_member_enrolled`, `list_member_classes`), `enroll_member`, `mark_attendance`. Usa `RealDictCursor` para mapear a dataclasses. Sin reglas de negocio.
+**Patterns:**
 
-- **`service.py`** — Excepción `BusinessError`. Funciones de alto nivel: altas con validación de horarios; `enroll_member` (existencia, cupo, duplicados, solapamiento con otras clases del miembro); `mark_attendance` solo si hay inscripción; `list_classes`.
+- **Repository:** `repository.py` as the persistence facade.  
+- **Service layer:** `service.py` holds application logic; the CLI stays thin.
 
-- **`cli.py`** — `main()`: `init_schema()`, bucle de menú, parseo de entrada y llamadas al servicio; manejo de `BusinessError` y `ValueError`.
+---
 
-- **`colors.py`** — Constantes ANSI y `c(text, color)` para mensajes en terminal.
+## Module structure (technical design)
 
-- **`conftest.py`** — Ajuste de `sys.path` para pytest en la raíz del proyecto.
+- **`config.py`** — Database settings via `python-dotenv`. `Settings` class (`db_host`, `db_port`, `db_name`, `db_user`, `db_password`, `dsn` property). `get_settings()` is used from `db.py`.
 
-- **`tests/`** — Tests de servicio y persistencia (ver [Tests](#tests)).
+- **`db.py`** — PostgreSQL connection. `get_connection()` as a context manager (commit/rollback). `init_schema()` creates the `trainers`, `members`, `classes`, `enrollments`, and `attendance` tables if they do not exist. Called when the CLI starts and in tests.
+
+- **`models.py`** — `Trainer`, `Member`, and `GymClass` as `@dataclass` with static typing.
+
+- **`repository.py`** — Persistence: `create_trainer`, `create_member`, `create_class`, `get_*`, `list_classes`, metrics (`count_enrollments`, `is_member_enrolled`, `list_member_classes`), `enroll_member`, `mark_attendance`. Uses `RealDictCursor` to map rows to dataclasses. No business rules.
+
+- **`service.py`** — `BusinessError` exception. High-level functions: create operations with time validation; `enroll_member` (existence, capacity, duplicates, overlap with the member’s other classes); `mark_attendance` only when enrolled; `list_classes`.
+
+- **`cli.py`** — `main()`: `init_schema()`, menu loop, input parsing and service calls; handles `BusinessError` and `ValueError`.
+
+- **`colors.py`** — ANSI constants and `c(text, color)` for terminal messages.
+
+- **`conftest.py`** — Adjusts `sys.path` for pytest from the project root.
+
+- **`tests/`** — Service and persistence tests (see [Tests](#tests)).
 
 ---
 
 ## Tests
 
-Comprueban la lógica de negocio y el repositorio contra una **base PostgreSQL real** (la misma configuración que la app, salvo que uses otra vía `.env`).
+They exercise business logic and the repository against a **real PostgreSQL database** (same configuration as the app unless you override it in `.env`).
 
-### Requisitos
+### Requirements
 
-- PostgreSQL en marcha con la misma configuración que la aplicación.
-- Dependencias instaladas (`pytest` viene en `requirements.txt`).
+- PostgreSQL running with the same settings as the application.
+- Dependencies installed (`pytest` is in `requirements.txt`).
 
 ### `conftest.py`
 
-Añade la raíz del proyecto a `sys.path` para importar `db`, `service`, `repository`, etc., sin instalar el proyecto como paquete.
+Adds the project root to `sys.path` so `db`, `service`, `repository`, etc. import correctly without installing the project as a package.
 
-### Estructura
+### Layout
 
-| Archivo | Contenido |
-|---------|-----------|
-| `tests/test_service.py` | Servicio: inscripción, cupo, horarios, asistencia. |
+| File | Contents |
+|------|----------|
+| `tests/test_service.py` | Service: enrollment, capacity, schedules, attendance. |
 
 ### Fixtures
 
-- **`clean_db`** (autouse): antes de cada test, `init_schema()` y `TRUNCATE ... RESTART IDENTITY` sobre `attendance`, `enrollments`, `classes`, `members`, `trainers`.
+- **`clean_db`** (autouse): before each test, `init_schema()` and `TRUNCATE ... RESTART IDENTITY` on `attendance`, `enrollments`, `classes`, `members`, `trainers`.
 
-### Casos destacados
+### Notable cases
 
-| Test | Qué valida |
-|------|------------|
-| `test_enroll_member_capacity_and_overlap` | Inscripción con cupo; rechazo por cupo lleno; rechazo por choque de horario el mismo día. |
-| `test_mark_attendance_requires_enrollment` | Asistencia solo con inscripción previa; registro en `attendance` tras inscribir. |
+| Test | What it checks |
+|------|----------------|
+| `test_enroll_member_capacity_and_overlap` | Enrollment with capacity; rejection when full; rejection on same-day schedule overlap. |
+| `test_mark_attendance_requires_enrollment` | Attendance only after enrollment; row in `attendance` after enrolling. |
 
-### Cómo ejecutar
+### How to run
 
-Desde la raíz, con el venv activado:
+From the project root with the virtual environment activated:
 
 ```bash
 pytest
@@ -226,4 +226,4 @@ pytest tests/test_service.py
 pytest -k "attendance"
 ```
 
-**Importante:** los tests hacen `TRUNCATE` en cada caso. No uses una base con datos que quieras conservar; para tests dedicados puedes usar por ejemplo `GYM_DB_NAME=gymdb_test` en `.env`.
+**Important:** tests run `TRUNCATE` on every case. Do not use a database you need to keep; for a dedicated test DB you can set e.g. `GYM_DB_NAME=gymdb_test` in `.env`.
