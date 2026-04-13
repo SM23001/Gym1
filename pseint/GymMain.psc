@@ -1,8 +1,12 @@
 Proceso GymMain
     Definir op Como Entero
-    Definir name, msg Como Cadena
+    Definir name, msg, hIni, hFin Como Cadena
     Definir id, trainer, day, hh1, mm1, hh2, mm2, startM, endM, cap, classIdNew, classIn, memberIn Como Entero
     Definir ok Como Logico
+
+    // Extra variables (strict mode friendly)
+    Definir i, j, count, idxClass, otherClass, dayC, startC, endC Como Entero
+    Definir trainerExists, classExists, memberExists, alreadyEnrolled, isOverlap, enrolled Como Logico
 
     // ----- Global data arrays -----
     Dimension trainerId[100], trainerName[100]
@@ -40,42 +44,64 @@ Proceso GymMain
             1:
                 Escribir "Trainer name:"
                 Leer name
+
                 nTrainers <- nTrainers + 1
                 trainerId[nTrainers] <- nextTrainerId
                 trainerName[nTrainers] <- name
+
                 id <- nextTrainerId
                 nextTrainerId <- nextTrainerId + 1
+
                 Escribir "Trainer created. ID=", id
 
             2:
                 Escribir "Member name:"
                 Leer name
+
                 nMembers <- nMembers + 1
                 memberId[nMembers] <- nextMemberId
                 memberName[nMembers] <- name
+
                 id <- nextMemberId
                 nextMemberId <- nextMemberId + 1
+
                 Escribir "Member created. ID=", id
 
             3:
-                Escribir "Class name:"; Leer name
-                Escribir "Trainer ID:"; Leer trainer
-                Escribir "Day (0=Mon..6=Sun):"; Leer day
-                Escribir "Start hh mm:"; Leer hh1, mm1
-                Escribir "End hh mm:"; Leer hh2, mm2
-                Escribir "Capacity:"; Leer cap
+                Escribir "Class name:"
+                Leer name
+
+                Escribir "Trainer ID:"
+                Leer trainer
+
+                Escribir "Day (0=Mon..6=Sun):"
+                Leer day
+
+                Escribir "Start hour (0..23):"
+                Leer hh1
+                Escribir "Start minute (0..59):"
+                Leer mm1
+
+                Escribir "End hour (0..23):"
+                Leer hh2
+                Escribir "End minute (0..59):"
+                Leer mm2
+
+                Escribir "Capacity:"
+                Leer cap
 
                 // Validation
                 ok <- Verdadero
                 msg <- "Class created"
 
-                // trainer exists
                 trainerExists <- Falso
-                Para i <- 1 Hasta nTrainers Hacer
-                    Si trainerId[i] = trainer Entonces
-                        trainerExists <- Verdadero
-                    FinSi
-                FinPara
+                Si nTrainers > 0 Entonces
+                    Para i <- 1 Hasta nTrainers Hacer
+                        Si trainerId[i] = trainer Entonces
+                            trainerExists <- Verdadero
+                        FinSi
+                    FinPara
+                FinSi
 
                 Si NO trainerExists Entonces
                     ok <- Falso
@@ -114,8 +140,10 @@ Proceso GymMain
                     classStart[nClasses] <- startM
                     classEnd[nClasses] <- endM
                     classCapacity[nClasses] <- cap
+
                     classIdNew <- nextClassId
                     nextClassId <- nextClassId + 1
+
                     Escribir msg
                     Escribir "Class ID=", classIdNew
                 SiNo
@@ -123,29 +151,33 @@ Proceso GymMain
                 FinSi
 
             4:
-                Escribir "Class ID:"; Leer classIn
-                Escribir "Member ID:"; Leer memberIn
+                Escribir "Class ID:"
+                Leer classIn
+                Escribir "Member ID:"
+                Leer memberIn
 
                 ok <- Verdadero
                 msg <- "Enrolled successfully"
 
-                // class exists + get class info
                 classExists <- Falso
                 idxClass <- -1
-                Para i <- 1 Hasta nClasses Hacer
-                    Si classId[i] = classIn Entonces
-                        classExists <- Verdadero
-                        idxClass <- i
-                    FinSi
-                FinPara
+                Si nClasses > 0 Entonces
+                    Para i <- 1 Hasta nClasses Hacer
+                        Si classId[i] = classIn Entonces
+                            classExists <- Verdadero
+                            idxClass <- i
+                        FinSi
+                    FinPara
+                FinSi
 
-                // member exists
                 memberExists <- Falso
-                Para i <- 1 Hasta nMembers Hacer
-                    Si memberId[i] = memberIn Entonces
-                        memberExists <- Verdadero
-                    FinSi
-                FinPara
+                Si nMembers > 0 Entonces
+                    Para i <- 1 Hasta nMembers Hacer
+                        Si memberId[i] = memberIn Entonces
+                            memberExists <- Verdadero
+                        FinSi
+                    FinPara
+                FinSi
 
                 Si NO classExists Entonces
                     ok <- Falso
@@ -160,11 +192,14 @@ Proceso GymMain
                 // duplicate enrollment
                 Si ok Entonces
                     alreadyEnrolled <- Falso
-                    Para i <- 1 Hasta nEnroll Hacer
-                        Si enrollClassId[i] = classIn Y enrollMemberId[i] = memberIn Entonces
-                            alreadyEnrolled <- Verdadero
-                        FinSi
-                    FinPara
+                    Si nEnroll > 0 Entonces
+                        Para i <- 1 Hasta nEnroll Hacer
+                            Si enrollClassId[i] = classIn Y enrollMemberId[i] = memberIn Entonces
+                                alreadyEnrolled <- Verdadero
+                            FinSi
+                        FinPara
+                    FinSi
+
                     Si alreadyEnrolled Entonces
                         ok <- Falso
                         msg <- "Member already enrolled"
@@ -174,11 +209,13 @@ Proceso GymMain
                 // capacity
                 Si ok Entonces
                     count <- 0
-                    Para i <- 1 Hasta nEnroll Hacer
-                        Si enrollClassId[i] = classIn Entonces
-                            count <- count + 1
-                        FinSi
-                    FinPara
+                    Si nEnroll > 0 Entonces
+                        Para i <- 1 Hasta nEnroll Hacer
+                            Si enrollClassId[i] = classIn Entonces
+                                count <- count + 1
+                            FinSi
+                        FinPara
+                    FinSi
 
                     Si count >= classCapacity[idxClass] Entonces
                         ok <- Falso
@@ -192,27 +229,29 @@ Proceso GymMain
                     startC <- classStart[idxClass]
                     endC <- classEnd[idxClass]
 
-                    Para i <- 1 Hasta nEnroll Hacer
-                        Si enrollMemberId[i] = memberIn Entonces
-                            otherClass <- enrollClassId[i]
+                    Si nEnroll > 0 Y nClasses > 0 Entonces
+                        Para i <- 1 Hasta nEnroll Hacer
+                            Si enrollMemberId[i] = memberIn Entonces
+                                otherClass <- enrollClassId[i]
 
-                            Para j <- 1 Hasta nClasses Hacer
-                                Si classId[j] = otherClass Entonces
-                                    isOverlap <- Falso
-                                    Si dayC = classDay[j] Entonces
-                                        Si NO (endC <= classStart[j] O classEnd[j] <= startC) Entonces
-                                            isOverlap <- Verdadero
+                                Para j <- 1 Hasta nClasses Hacer
+                                    Si classId[j] = otherClass Entonces
+                                        isOverlap <- Falso
+                                        Si dayC = classDay[j] Entonces
+                                            Si NO (endC <= classStart[j] O classEnd[j] <= startC) Entonces
+                                                isOverlap <- Verdadero
+                                            FinSi
+                                        FinSi
+
+                                        Si isOverlap Entonces
+                                            ok <- Falso
+                                            msg <- "Schedule conflict"
                                         FinSi
                                     FinSi
-
-                                    Si isOverlap Entonces
-                                        ok <- Falso
-                                        msg <- "Schedule conflict"
-                                    FinSi
-                                FinSi
-                            FinPara
-                        FinSi
-                    FinPara
+                                FinPara
+                            FinSi
+                        FinPara
+                    FinSi
                 FinSi
 
                 Si ok Entonces
@@ -224,15 +263,19 @@ Proceso GymMain
                 Escribir msg
 
             5:
-                Escribir "Class ID:"; Leer classIn
-                Escribir "Member ID:"; Leer memberIn
+                Escribir "Class ID:"
+                Leer classIn
+                Escribir "Member ID:"
+                Leer memberIn
 
                 enrolled <- Falso
-                Para i <- 1 Hasta nEnroll Hacer
-                    Si enrollClassId[i] = classIn Y enrollMemberId[i] = memberIn Entonces
-                        enrolled <- Verdadero
-                    FinSi
-                FinPara
+                Si nEnroll > 0 Entonces
+                    Para i <- 1 Hasta nEnroll Hacer
+                        Si enrollClassId[i] = classIn Y enrollMemberId[i] = memberIn Entonces
+                            enrolled <- Verdadero
+                        FinSi
+                    FinPara
+                FinSi
 
                 Si NO enrolled Entonces
                     Escribir "Member is not enrolled in that class"
@@ -249,7 +292,10 @@ Proceso GymMain
                     Escribir "No classes registered"
                 SiNo
                     Para i <- 1 Hasta nClasses Hacer
-                        Escribir "[", classId[i], "] ", className[i], " | Trainer:", classTrainerId[i], " | Day:", classDay[i], " | ", classStart[i], "-", classEnd[i], " | Cap:", classCapacity[i]
+                        minutesToHHMM(classStart[i], hIni)
+                        minutesToHHMM(classEnd[i], hFin)
+
+                        Escribir "[", classId[i], "] ", className[i], " | Trainer:", classTrainerId[i], " | Day:", classDay[i], " | ", hIni, "-", hFin, " | Cap:", classCapacity[i]
                     FinPara
                 FinSi
 
@@ -261,3 +307,25 @@ Proceso GymMain
         FinSegun
     Hasta Que op = 0
 FinProceso
+
+SubProceso minutesToHHMM(totalMin, txtHora Por Referencia)
+    Definir hh, mm Como Entero
+    Definir sh, sm Como Cadena
+
+    hh <- trunc(totalMin / 60)
+    mm <- totalMin MOD 60
+
+    Si hh < 10 Entonces
+        sh <- "0" + ConvertirATexto(hh)
+    SiNo
+        sh <- ConvertirATexto(hh)
+    FinSi
+
+    Si mm < 10 Entonces
+        sm <- "0" + ConvertirATexto(mm)
+    SiNo
+        sm <- ConvertirATexto(mm)
+    FinSi
+
+    txtHora <- sh + ":" + sm
+FinSubProceso
