@@ -237,6 +237,3 @@ pytest -k "attendance"
 | **B — UI/CLI** | Presentation layer | `cli.py`, `colors.py` | Menu options, input parsing, output formatting, user messages, catching/displaying `BusinessError`. |
 | **C — Quality + Docs** | Tests + documentation | `tests/`, `conftest.py`, `README.md` | Tests/fixtures, CI mindset, onboarding docs, collaboration rules, keeping docs in sync with changes. |
 
-**Shared rule:** changes to `models.py` or `db.py` affect all layers—announce early and keep the PR small.
-
-**DB safety:** run `pytest` only against a dedicated test DB (tests truncate tables).
