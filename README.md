@@ -17,7 +17,7 @@ A **command-line (CLI)** gym management system in Python with **PostgreSQL** per
 7. [Software architecture model](#software-architecture-model)
 8. [Module structure (technical design)](#module-structure-technical-design)
 9. [Tests](#tests)
-
+10. [Team roles 3 collaborators](#Team-roles-3-collaborators)  
 ---
 
 ## Prerequisites
@@ -227,3 +227,16 @@ pytest -k "attendance"
 ```
 
 **Important:** tests run `TRUNCATE` on every case. Do not use a database you need to keep; for a dedicated test DB you can set e.g. `GYM_DB_NAME=gymdb_test` in `.env`.
+
+---
+## Team roles 3 collaborators
+
+| Person | Focus | Owns (primary files) | Responsibilities |
+|---|---|---|---|
+| **A — Core (business + data)** | Service + persistence | `service.py`, `repository.py`, `db.py`, `config.py`, `models.py` | Business rules, SQL queries, schema updates, dataclasses, env variables. |
+| **B — UI/CLI** | Presentation layer | `cli.py`, `colors.py` | Menu options, input parsing, output formatting, user messages, catching/displaying `BusinessError`. |
+| **C — Quality + Docs** | Tests + documentation | `tests/`, `conftest.py`, `README.md` | Tests/fixtures, CI mindset, onboarding docs, collaboration rules, keeping docs in sync with changes. |
+
+**Shared rule:** changes to `models.py` or `db.py` affect all layers—announce early and keep the PR small.
+
+**DB safety:** run `pytest` only against a dedicated test DB (tests truncate tables).
