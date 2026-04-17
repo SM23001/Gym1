@@ -3,7 +3,7 @@
 RESET = "\033[0m"
 BOLD = "\033[1m"
 
-# Colores normales
+# Colores normales 1
 RED = "\033[31m"
 GREEN = "\033[32m"
 YELLOW = "\033[33m"
