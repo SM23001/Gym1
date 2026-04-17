@@ -1,0 +1,35 @@
+# Bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+.venv*/
+venv/
+ENV/
+env/
+
+# Environment and secrets (python-dotenv)
+.env
+.env.*
+!.env.example
+
+# pytest
+.pytest_cache/
+
+# Coverage / tooling (optional but common)
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
