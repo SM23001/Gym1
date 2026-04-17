@@ -26,7 +26,7 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
-# OS / editor
+# OS / editors
 .DS_Store
 Thumbs.db
 *.swp
