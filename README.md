@@ -237,3 +237,15 @@ pytest -k "attendance"
 | **B — UI/CLI** | Presentation layer | `cli.py`, `colors.py` | Menu options, input parsing, output formatting, user messages, catching/displaying `BusinessError`. |
 | **C — Quality + Docs** | Tests + documentation | `tests/`, `conftest.py`, `README.md` | Tests/fixtures, CI mindset, onboarding docs, collaboration rules, keeping docs in sync with changes. |
 
+---
+
+## Contributors
+
+Thanks to all the people who have contributed to this project!
+
+| Contributor | GitHub Profile |
+|---|---|
+| **Fernando Edgardo Saz Márquez** | [@SM23001](https://github.com/SM23001) |
+| **VersComp** | [@VersComp](https://github.com/VersComp) |
+| **fsaz87** | [@fsaz87](https://github.com/fsaz87) |
+
