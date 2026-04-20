@@ -124,9 +124,24 @@ Main dependencies (`requirements.txt`):
 
 ## Running the application
 
+### From the terminal
+
 ```bash
-source .venv/bin/activate
+source .venv/bin/activate   # Linux / macOS
+# .venv\Scripts\activate    # Windows (cmd)
 python cli.py
+```
+
+### From Windows Explorer (double-click)
+
+Double-click **`run.bat`** in the project folder. It activates the virtual environment automatically and opens the CLI in a Command Prompt window.
+
+### From a Linux / macOS file manager
+
+Run **`run.sh`** from a terminal or configure your file manager to execute it in a terminal emulator:
+
+```bash
+bash run.sh
 ```
 
 The menu includes, among other options:
