@@ -24,6 +24,7 @@ def main():
         print(c("5.", YELLOW), "Registrar asistencia")
         print(c("6.", YELLOW), "Listar clases")
         print(c("7.", YELLOW), "Listar entrenadores")
+        print(c("8.", YELLOW), "Listar miembros")
         print(c("0.", YELLOW), "Salir")
 
         option = input(c("Opción: ", CYAN)).strip()
@@ -77,6 +78,12 @@ def main():
                 print(c("Entrenadores:", YELLOW))
                 for t in service.list_trainers():
                     print(f"  [{t.id}] {t.name}")
+
+            elif option == "8":
+                print()
+                print(c("Miembros:", YELLOW))
+                for m in service.list_members():
+                    print(f"  [{m.id}] {m.name}")
 
             elif option == "0":
                 print(c("Hasta luego.", GREEN))

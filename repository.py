@@ -86,6 +86,14 @@ def get_member(member_id: int) -> Optional[Member]:
     return Member(**row) if row else None
 
 
+def list_members() -> List[Member]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT id, name FROM members ORDER BY id")
+            rows = cur.fetchall()
+    return [Member(**r) for r in rows]
+
+
 def get_class(class_id: int) -> Optional[GymClass]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:

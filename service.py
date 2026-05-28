@@ -79,3 +79,7 @@ def list_classes():
 def list_trainers():
     return repo.list_trainers()
 
+
+def list_members():
+    return repo.list_members()
+
