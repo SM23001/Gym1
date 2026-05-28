@@ -75,3 +75,7 @@ def mark_attendance(class_id: int, member_id: int) -> None:
 def list_classes():
     return repo.list_classes()
 
+
+def list_trainers():
+    return repo.list_trainers()
+

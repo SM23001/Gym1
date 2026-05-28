@@ -23,6 +23,7 @@ def main():
         print(c("4.", YELLOW), "Inscribir miembro en clase")
         print(c("5.", YELLOW), "Registrar asistencia")
         print(c("6.", YELLOW), "Listar clases")
+        print(c("7.", YELLOW), "Listar entrenadores")
         print(c("0.", YELLOW), "Salir")
 
         option = input(c("Opción: ", CYAN)).strip()
@@ -70,6 +71,12 @@ def main():
                         f"Día: {c_obj.day_of_week} {c_obj.start_time}-{c_obj.end_time} "
                         f"Cupo: {c_obj.capacity}"
                     )
+
+            elif option == "7":
+                print()
+                print(c("Entrenadores:", YELLOW))
+                for t in service.list_trainers():
+                    print(f"  [{t.id}] {t.name}")
 
             elif option == "0":
                 print(c("Hasta luego.", GREEN))

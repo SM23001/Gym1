@@ -70,6 +70,14 @@ def get_trainer(trainer_id: int) -> Optional[Trainer]:
     return Trainer(**row) if row else None
 
 
+def list_trainers() -> List[Trainer]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT id, name FROM trainers ORDER BY id")
+            rows = cur.fetchall()
+    return [Trainer(**r) for r in rows]
+
+
 def get_member(member_id: int) -> Optional[Member]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
