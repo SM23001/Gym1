@@ -203,27 +203,87 @@ Adds the project root to `sys.path` so `db`, `service`, `repository`, etc. impor
 | File | Contents |
 |------|----------|
 | `tests/test_service.py` | Service: enrollment, capacity, schedules, attendance. |
+| `tests/test_trainer_crud.py` | Trainer CRUD: create, read, list, update, delete, and validation rules. |
+| `tests/test_member_crud.py` | Member CRUD: create, read, list, update, delete, and cascade on delete. |
+| `tests/test_class_crud.py` | Class CRUD: create, read, list, update, delete, field validation, and capacity rules. |
 
 ### Fixtures
 
-- **`clean_db`** (autouse): before each test, `init_schema()` and `TRUNCATE ... RESTART IDENTITY` on `attendance`, `enrollments`, `classes`, `members`, `trainers`.
+- **`clean_db`** (autouse): before each test, `init_schema()` and `TRUNCATE ... RESTART IDENTITY` on `attendance`, `enrollments`, `classes`, `members`, `trainers`. Defined in each test file.
 
 ### Notable cases
+
+#### `tests/test_service.py`
 
 | Test | What it checks |
 |------|----------------|
 | `test_enroll_member_capacity_and_overlap` | Enrollment with capacity; rejection when full; rejection on same-day schedule overlap. |
 | `test_mark_attendance_requires_enrollment` | Attendance only after enrollment; row in `attendance` after enrolling. |
 
+#### `tests/test_trainer_crud.py`
+
+| Test | What it checks |
+|------|----------------|
+| `test_create_trainer` | Successful trainer creation. |
+| `test_create_trainer_empty_name` | Rejects blank or whitespace-only names. |
+| `test_get_trainer` / `test_get_trainer_not_found` | Read by id; returns `None` when missing. |
+| `test_list_trainers` | Lists all trainers in order. |
+| `test_update_trainer` | Updates name while keeping the same id. |
+| `test_update_trainer_not_found` / `test_update_trainer_empty_name` | Update errors for missing trainer and empty name. |
+| `test_delete_trainer` | Deletes an existing trainer. |
+| `test_delete_trainer_not_found` | Delete error when trainer does not exist. |
+| `test_delete_trainer_with_classes` | Blocks delete when the trainer still has assigned classes. |
+
+#### `tests/test_member_crud.py`
+
+| Test | What it checks |
+|------|----------------|
+| `test_create_member` | Successful member creation. |
+| `test_create_member_empty_name` | Rejects blank or whitespace-only names. |
+| `test_get_member` / `test_get_member_not_found` | Read by id; returns `None` when missing. |
+| `test_list_members` | Lists all members in order. |
+| `test_update_member` | Updates name while keeping the same id. |
+| `test_update_member_not_found` / `test_update_member_empty_name` | Update errors for missing member and empty name. |
+| `test_delete_member` | Deletes an existing member. |
+| `test_delete_member_not_found` | Delete error when member does not exist. |
+| `test_delete_member_cascades_enrollments` | Deleting a member removes related enrollment rows (`ON DELETE CASCADE`). |
+
+#### `tests/test_class_crud.py`
+
+| Test | What it checks |
+|------|----------------|
+| `test_create_class` | Successful class creation. |
+| `test_create_class_empty_name` | Rejects blank or whitespace-only names. |
+| `test_create_class_invalid_trainer` | Rejects creation when the trainer does not exist. |
+| `test_create_class_invalid_time` | Rejects end time before or equal to start time. |
+| `test_get_class` / `test_get_class_not_found` | Read by id; returns `None` when missing. |
+| `test_list_classes` | Lists all classes in order. |
+| `test_update_class` | Updates all class fields (name, trainer, schedule, capacity). |
+| `test_update_class_not_found` | Update error when class does not exist. |
+| `test_update_class_capacity_below_enrollments` | Blocks lowering capacity below current enrollment count. |
+| `test_delete_class` | Deletes an existing class. |
+| `test_delete_class_not_found` | Delete error when class does not exist. |
+| `test_delete_class_cascades_enrollments` | Deleting a class removes related enrollment rows (`ON DELETE CASCADE`). |
+
 ### How to run
 
-From the project root with the virtual environment activated:
+From the project root:
 
 ```bash
 pytest
 pytest -v
 pytest tests/test_service.py
+pytest tests/test_trainer_crud.py
+pytest tests/test_member_crud.py
+pytest tests/test_class_crud.py
 pytest -k "attendance"
+pytest -k "crud"
+```
+
+Or run a specific file with the virtual environment Python directly (no need to activate first):
+
+```bash
+.venv/bin/python -m pytest tests/test_class_crud.py -v
 ```
 
 **Important:** tests run `TRUNCATE` on every case. Do not use a database you need to keep; for a dedicated test DB you can set e.g. `GYM_DB_NAME=gymdb_test` in `.env`.
