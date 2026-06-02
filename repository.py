@@ -178,6 +178,50 @@ def list_classes() -> List[GymClass]:
     return [GymClass(**r) for r in rows]
 
 
+def update_class(
+    class_id: int,
+    name: str,
+    trainer_id: int,
+    day_of_week: int,
+    start_time: time,
+    end_time: time,
+    capacity: int,
+) -> Optional[GymClass]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE classes
+                SET name = %s,
+                    trainer_id = %s,
+                    day_of_week = %s,
+                    start_time = %s,
+                    end_time = %s,
+                    capacity = %s
+                WHERE id = %s
+                RETURNING id, name, trainer_id, day_of_week, start_time, end_time, capacity
+                """,
+                (
+                    name,
+                    trainer_id,
+                    day_of_week,
+                    start_time,
+                    end_time,
+                    capacity,
+                    class_id,
+                ),
+            )
+            row = cur.fetchone()
+    return GymClass(**row) if row else None
+
+
+def delete_class(class_id: int) -> bool:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM classes WHERE id = %s", (class_id,))
+            return cur.rowcount > 0
+
+
 def count_enrollments(class_id: int) -> int:
     with get_connection() as conn:
         with conn.cursor() as cur:
