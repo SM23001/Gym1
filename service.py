@@ -40,7 +40,30 @@ def delete_trainer(trainer_id: int) -> None:
 
 
 def create_member(name: str):
+    name = name.strip()
+    if not name:
+        raise BusinessError("El nombre no puede estar vacío")
     return repo.create_member(name)
+
+
+def get_member(member_id: int):
+    return repo.get_member(member_id)
+
+
+def update_member(member_id: int, name: str):
+    name = name.strip()
+    if not name:
+        raise BusinessError("El nombre no puede estar vacío")
+    member = repo.update_member(member_id, name)
+    if member is None:
+        raise BusinessError("Miembro no existe")
+    return member
+
+
+def delete_member(member_id: int) -> None:
+    if repo.get_member(member_id) is None:
+        raise BusinessError("Miembro no existe")
+    repo.delete_member(member_id)
 
 
 def create_class(
