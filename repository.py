@@ -127,6 +127,28 @@ def list_members() -> List[Member]:
     return [Member(**r) for r in rows]
 
 
+def update_member(member_id: int, name: str) -> Optional[Member]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE members SET name = %s
+                WHERE id = %s
+                RETURNING id, name
+                """,
+                (name, member_id),
+            )
+            row = cur.fetchone()
+    return Member(**row) if row else None
+
+
+def delete_member(member_id: int) -> bool:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM members WHERE id = %s", (member_id,))
+            return cur.rowcount > 0
+
+
 def get_class(class_id: int) -> Optional[GymClass]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:

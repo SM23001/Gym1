@@ -28,6 +28,9 @@ def main():
         print(c("9.", YELLOW), "Modificar entrenador")
         print(c("10.", YELLOW), "Eliminar entrenador")
         print(c("11.", YELLOW), "Listar miembros")
+        print(c("12.", YELLOW), "Ver miembro por id")
+        print(c("13.", YELLOW), "Modificar miembro")
+        print(c("14.", YELLOW), "Eliminar miembro")
         print(c("0.", YELLOW), "Salir")
 
         option = input(c("Opción: ", CYAN)).strip()
@@ -106,6 +109,25 @@ def main():
                 print(c("Miembros:", YELLOW))
                 for m in service.list_members():
                     print(f"  [{m.id}] {m.name}")
+
+            elif option == "12":
+                member_id = int(input("Id del miembro: "))
+                m = service.get_member(member_id)
+                if m is None:
+                    print(c("Miembro no encontrado", RED))
+                else:
+                    print(c(f"  [{m.id}] {m.name}", GREEN))
+
+            elif option == "13":
+                member_id = int(input("Id del miembro: "))
+                name = input("Nuevo nombre: ")
+                m = service.update_member(member_id, name)
+                print(c(f"Miembro actualizado: [{m.id}] {m.name}", GREEN))
+
+            elif option == "14":
+                member_id = int(input("Id del miembro: "))
+                service.delete_member(member_id)
+                print(c("Miembro eliminado", GREEN))
 
             elif option == "0":
                 print(c("Hasta luego.", GREEN))
