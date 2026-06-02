@@ -78,6 +78,39 @@ def list_trainers() -> List[Trainer]:
     return [Trainer(**r) for r in rows]
 
 
+def update_trainer(trainer_id: int, name: str) -> Optional[Trainer]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE trainers SET name = %s
+                WHERE id = %s
+                RETURNING id, name
+                """,
+                (name, trainer_id),
+            )
+            row = cur.fetchone()
+    return Trainer(**row) if row else None
+
+
+def delete_trainer(trainer_id: int) -> bool:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM trainers WHERE id = %s", (trainer_id,))
+            return cur.rowcount > 0
+
+
+def count_classes_by_trainer(trainer_id: int) -> int:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT COUNT(*) FROM classes WHERE trainer_id = %s",
+                (trainer_id,),
+            )
+            (count,) = cur.fetchone()
+    return int(count)
+
+
 def get_member(member_id: int) -> Optional[Member]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:

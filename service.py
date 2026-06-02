@@ -9,7 +9,34 @@ class BusinessError(Exception):
 
 
 def create_trainer(name: str):
+    name = name.strip()
+    if not name:
+        raise BusinessError("El nombre no puede estar vacío")
     return repo.create_trainer(name)
+
+
+def get_trainer(trainer_id: int):
+    return repo.get_trainer(trainer_id)
+
+
+def update_trainer(trainer_id: int, name: str):
+    name = name.strip()
+    if not name:
+        raise BusinessError("El nombre no puede estar vacío")
+    trainer = repo.update_trainer(trainer_id, name)
+    if trainer is None:
+        raise BusinessError("Entrenador no existe")
+    return trainer
+
+
+def delete_trainer(trainer_id: int) -> None:
+    if repo.get_trainer(trainer_id) is None:
+        raise BusinessError("Entrenador no existe")
+    if repo.count_classes_by_trainer(trainer_id) > 0:
+        raise BusinessError(
+            "No se puede eliminar: el entrenador tiene clases asignadas"
+        )
+    repo.delete_trainer(trainer_id)
 
 
 def create_member(name: str):
