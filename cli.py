@@ -11,6 +11,16 @@ def parse_time(hhmm: str):
     return datetime.strptime(hhmm, "%H:%M").time()
 
 
+def prompt_class_fields():
+    name = input("Nombre de la clase: ")
+    trainer_id = int(input("Id entrenador: "))
+    day = int(input("Día de la semana (0=lunes ... 6=domingo): "))
+    start = parse_time(input("Hora inicio (HH:MM): "))
+    end = parse_time(input("Hora fin (HH:MM): "))
+    capacity = int(input("Cupo máximo: "))
+    return name, trainer_id, day, start, end, capacity
+
+
 def main():
     init_schema()
 
@@ -31,6 +41,9 @@ def main():
         print(c("12.", YELLOW), "Ver miembro por id")
         print(c("13.", YELLOW), "Modificar miembro")
         print(c("14.", YELLOW), "Eliminar miembro")
+        print(c("15.", YELLOW), "Ver clase por id")
+        print(c("16.", YELLOW), "Modificar clase")
+        print(c("17.", YELLOW), "Eliminar clase")
         print(c("0.", YELLOW), "Salir")
 
         option = input(c("Opción: ", CYAN)).strip()
@@ -47,14 +60,8 @@ def main():
                 print(c(f"Miembro creado con id {m.id}", GREEN))
 
             elif option == "3":
-                name = input("Nombre de la clase: ")
-                trainer_id = int(input("Id entrenador: "))
-                day = int(input("Día de la semana (0=lunes ... 6=domingo): "))
-                start = parse_time(input("Hora inicio (HH:MM): "))
-                end = parse_time(input("Hora fin (HH:MM): "))
-                capacity = int(input("Cupo máximo: "))
-
-                c_obj = service.create_class(name, trainer_id, day, start, end, capacity)
+                fields = prompt_class_fields()
+                c_obj = service.create_class(*fields)
                 print(c(f"Clase creada con id {c_obj.id}", GREEN))
 
             elif option == "4":
@@ -73,11 +80,7 @@ def main():
                 print()
                 print(c("Clases:", YELLOW))
                 for c_obj in service.list_classes():
-                    print(
-                        f"  [{c_obj.id}] {c_obj.name} - Entrenador {c_obj.trainer_id} - "
-                        f"Día: {c_obj.day_of_week} {c_obj.start_time}-{c_obj.end_time} "
-                        f"Cupo: {c_obj.capacity}"
-                    )
+                    print(f"  {service.format_class(c_obj)}")
 
             elif option == "7":
                 print()
@@ -128,6 +131,25 @@ def main():
                 member_id = int(input("Id del miembro: "))
                 service.delete_member(member_id)
                 print(c("Miembro eliminado", GREEN))
+
+            elif option == "15":
+                class_id = int(input("Id de la clase: "))
+                c_obj = service.get_class(class_id)
+                if c_obj is None:
+                    print(c("Clase no encontrada", RED))
+                else:
+                    print(c(f"  {service.format_class(c_obj)}", GREEN))
+
+            elif option == "16":
+                class_id = int(input("Id de la clase: "))
+                fields = prompt_class_fields()
+                c_obj = service.update_class(class_id, *fields)
+                print(c(f"Clase actualizada: {service.format_class(c_obj)}", GREEN))
+
+            elif option == "17":
+                class_id = int(input("Id de la clase: "))
+                service.delete_class(class_id)
+                print(c("Clase eliminada", GREEN))
 
             elif option == "0":
                 print(c("Hasta luego.", GREEN))

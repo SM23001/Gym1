@@ -66,6 +66,28 @@ def delete_member(member_id: int) -> None:
     repo.delete_member(member_id)
 
 
+def _validate_class_fields(
+    name: str,
+    trainer_id: int,
+    day_of_week: int,
+    start_time: time,
+    end_time: time,
+    capacity: int,
+) -> str:
+    name = name.strip()
+    if not name:
+        raise BusinessError("El nombre no puede estar vacío")
+    if repo.get_trainer(trainer_id) is None:
+        raise BusinessError("El entrenador no existe")
+    if not 0 <= day_of_week <= 6:
+        raise BusinessError("El día de la semana debe estar entre 0 y 6")
+    if end_time <= start_time:
+        raise BusinessError("La hora de fin debe ser posterior a la de inicio")
+    if capacity <= 0:
+        raise BusinessError("El cupo debe ser mayor que cero")
+    return name
+
+
 def create_class(
     name: str,
     trainer_id: int,
@@ -74,10 +96,9 @@ def create_class(
     end_time: time,
     capacity: int,
 ) -> GymClass:
-    if repo.get_trainer(trainer_id) is None:
-        raise BusinessError("El entrenador no existe. Cree primero un entrenador (opción 1).")
-    if end_time <= start_time:
-        raise BusinessError("La hora de fin debe ser posterior a la de inicio")
+    name = _validate_class_fields(
+        name, trainer_id, day_of_week, start_time, end_time, capacity
+    )
     return repo.create_class(
         name=name,
         trainer_id=trainer_id,
@@ -86,6 +107,49 @@ def create_class(
         end_time=end_time,
         capacity=capacity,
     )
+
+
+def get_class(class_id: int):
+    return repo.get_class(class_id)
+
+
+def update_class(
+    class_id: int,
+    name: str,
+    trainer_id: int,
+    day_of_week: int,
+    start_time: time,
+    end_time: time,
+    capacity: int,
+) -> GymClass:
+    if repo.get_class(class_id) is None:
+        raise BusinessError("Clase no existe")
+    name = _validate_class_fields(
+        name, trainer_id, day_of_week, start_time, end_time, capacity
+    )
+    enrolled = repo.count_enrollments(class_id)
+    if capacity < enrolled:
+        raise BusinessError(
+            f"El cupo no puede ser menor que las inscripciones actuales ({enrolled})"
+        )
+    gym_class = repo.update_class(
+        class_id=class_id,
+        name=name,
+        trainer_id=trainer_id,
+        day_of_week=day_of_week,
+        start_time=start_time,
+        end_time=end_time,
+        capacity=capacity,
+    )
+    if gym_class is None:
+        raise BusinessError("Clase no existe")
+    return gym_class
+
+
+def delete_class(class_id: int) -> None:
+    if repo.get_class(class_id) is None:
+        raise BusinessError("Clase no existe")
+    repo.delete_class(class_id)
 
 
 def _overlaps(c1: GymClass, c2: GymClass) -> bool:
@@ -124,6 +188,14 @@ def mark_attendance(class_id: int, member_id: int) -> None:
 
 def list_classes():
     return repo.list_classes()
+
+
+def format_class(gym_class: GymClass) -> str:
+    return (
+        f"[{gym_class.id}] {gym_class.name} - Entrenador {gym_class.trainer_id} - "
+        f"Día: {gym_class.day_of_week} {gym_class.start_time}-{gym_class.end_time} "
+        f"Cupo: {gym_class.capacity}"
+    )
 
 
 def list_trainers():
