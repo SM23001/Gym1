@@ -24,7 +24,10 @@ def main():
         print(c("5.", YELLOW), "Registrar asistencia")
         print(c("6.", YELLOW), "Listar clases")
         print(c("7.", YELLOW), "Listar entrenadores")
-        print(c("8.", YELLOW), "Listar miembros")
+        print(c("8.", YELLOW), "Ver entrenador por id")
+        print(c("9.", YELLOW), "Modificar entrenador")
+        print(c("10.", YELLOW), "Eliminar entrenador")
+        print(c("11.", YELLOW), "Listar miembros")
         print(c("0.", YELLOW), "Salir")
 
         option = input(c("Opción: ", CYAN)).strip()
@@ -80,6 +83,25 @@ def main():
                     print(f"  [{t.id}] {t.name}")
 
             elif option == "8":
+                trainer_id = int(input("Id del entrenador: "))
+                t = service.get_trainer(trainer_id)
+                if t is None:
+                    print(c("Entrenador no encontrado", RED))
+                else:
+                    print(c(f"  [{t.id}] {t.name}", GREEN))
+
+            elif option == "9":
+                trainer_id = int(input("Id del entrenador: "))
+                name = input("Nuevo nombre: ")
+                t = service.update_trainer(trainer_id, name)
+                print(c(f"Entrenador actualizado: [{t.id}] {t.name}", GREEN))
+
+            elif option == "10":
+                trainer_id = int(input("Id del entrenador: "))
+                service.delete_trainer(trainer_id)
+                print(c("Entrenador eliminado", GREEN))
+
+            elif option == "11":
                 print()
                 print(c("Miembros:", YELLOW))
                 for m in service.list_members():
