@@ -294,6 +294,7 @@ def run_member_menu() -> None:
         ("3", "View by id"),
         ("4", "Update"),
         ("5", "Delete"),
+        ("6", "Classes of member"),
         ("0", "Back"),
     ]
     while True:
@@ -334,6 +335,22 @@ def run_member_menu() -> None:
                 member_id = prompt_member_id("Member to delete")
                 service.delete_member(member_id)
                 print_success("Member deleted")
+                pause()
+
+            elif option == "6":
+                member_id = prompt_member_id("Select a member")
+                m = service.get_member(member_id)
+                if m is None:
+                    print_error("Member not found")
+                else:
+                    print()
+                    print(c(f"  Classes for [{m.id}] {m.name}:", YELLOW))
+                    classes = service.list_member_classes(member_id)
+                    if not classes:
+                        print(c("  (no classes for this member)", CYAN))
+                    else:
+                        for gym_class in classes:
+                            print(f"    {service.format_class(gym_class)}")
                 pause()
 
             elif option == "0":
