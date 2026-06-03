@@ -190,6 +190,10 @@ def list_classes():
     return repo.list_classes()
 
 
+def list_classes_by_trainer(trainer_id: int):
+    return repo.list_classes_by_trainer(trainer_id)
+
+
 def format_class(gym_class: GymClass) -> str:
     return (
         f"[{gym_class.id}] {gym_class.name} - Entrenador {gym_class.trainer_id} - "
