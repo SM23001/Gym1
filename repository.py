@@ -296,6 +296,23 @@ def list_member_classes(member_id: int) -> List[GymClass]:
     return [GymClass(**r) for r in rows]
 
 
+def list_class_members(class_id: int) -> List[Member]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT m.id, m.name
+                FROM members m
+                JOIN enrollments e ON e.member_id = m.id
+                WHERE e.class_id = %s
+                ORDER BY m.id
+                """,
+                (class_id,),
+            )
+            rows = cur.fetchall()
+    return [Member(**r) for r in rows]
+
+
 def mark_attendance(class_id: int, member_id: int) -> None:
     with get_connection() as conn:
         with conn.cursor() as cur:

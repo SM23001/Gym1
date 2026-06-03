@@ -92,6 +92,19 @@ def test_list_classes():
     assert [c.name for c in classes] == ["A", "B"]
 
 
+def test_list_class_members():
+    gym_class = _create_class("Spinning")
+    m1 = service.create_member("Juan")
+    service.create_member("María")
+    service.enroll_member(gym_class.id, m1.id)
+    members = service.list_class_members(gym_class.id)
+    assert len(members) == 1
+    assert members[0].id == m1.id
+    assert members[0].name == "Juan"
+    other = _create_class("Yoga")
+    assert service.list_class_members(other.id) == []
+
+
 def test_update_class():
     gym_class = _create_class("Original")
     trainer = service.create_trainer("Nuevo T")
