@@ -15,13 +15,13 @@ from db import init_schema
 import service
 
 DAY_NAMES = (
-    "Lunes",
-    "Martes",
-    "Miércoles",
-    "Jueves",
-    "Viernes",
-    "Sábado",
-    "Domingo",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
 )
 
 
@@ -44,7 +44,7 @@ def print_menu(options: list[tuple[str, str]]) -> None:
 
 
 def pause() -> None:
-    input(c("\n  Pulsa Enter para continuar… ", CYAN))
+    input(c("\n  Press Enter to continue… ", CYAN))
 
 
 def print_success(message: str) -> None:
@@ -60,7 +60,7 @@ def prompt_text(label: str, *, required: bool = True) -> str:
         value = input(c(f"  {label}: ", CYAN)).strip()
         if value or not required:
             return value
-        print_error("Este campo es obligatorio.")
+        print_error("This field is required.")
 
 
 def prompt_int(
@@ -74,13 +74,13 @@ def prompt_int(
         try:
             value = int(raw)
         except ValueError:
-            print_error("Introduce un número entero válido.")
+            print_error("Enter a valid integer.")
             continue
         if min_value is not None and value < min_value:
-            print_error(f"El valor mínimo es {min_value}.")
+            print_error(f"Minimum value is {min_value}.")
             continue
         if max_value is not None and value > max_value:
-            print_error(f"El valor máximo es {max_value}.")
+            print_error(f"Maximum value is {max_value}.")
             continue
         return value
 
@@ -91,11 +91,11 @@ def prompt_time(label: str) -> time:
         try:
             return parse_time(raw)
         except ValueError:
-            print_error("Formato inválido. Usa HH:MM, por ejemplo 09:30.")
+            print_error("Invalid format. Use HH:MM, e.g. 09:30.")
 
 
 def prompt_optional_text(label: str, current: str) -> str:
-    hint = c(f" [Enter = «{current}»]", CYAN)
+    hint = c(f" [Enter = '{current}']", CYAN)
     value = input(c(f"  {label}{hint}: ", CYAN)).strip()
     return value if value else current
 
@@ -108,13 +108,13 @@ def prompt_optional_int(label: str, current: int, **kwargs) -> int:
     try:
         value = int(raw)
     except ValueError:
-        raise ValueError(f"{label}: se esperaba un número entero")
+        raise ValueError(f"{label}: expected an integer")
     min_value = kwargs.get("min_value")
     max_value = kwargs.get("max_value")
     if min_value is not None and value < min_value:
-        raise ValueError(f"{label}: el valor mínimo es {min_value}")
+        raise ValueError(f"{label}: minimum value is {min_value}")
     if max_value is not None and value > max_value:
-        raise ValueError(f"{label}: el valor máximo es {max_value}")
+        raise ValueError(f"{label}: maximum value is {max_value}")
     return value
 
 
@@ -129,7 +129,7 @@ def prompt_optional_time(label: str, current: time) -> time:
 def show_trainers() -> None:
     trainers = service.list_trainers()
     if not trainers:
-        print(c("  (sin entrenadores registrados)", CYAN))
+        print(c("  (no trainers registered)", CYAN))
         return
     for t in trainers:
         print(f"    [{t.id}] {t.name}")
@@ -138,7 +138,7 @@ def show_trainers() -> None:
 def show_members() -> None:
     members = service.list_members()
     if not members:
-        print(c("  (sin miembros registrados)", CYAN))
+        print(c("  (no members registered)", CYAN))
         return
     for m in members:
         print(f"    [{m.id}] {m.name}")
@@ -147,7 +147,7 @@ def show_members() -> None:
 def show_classes() -> None:
     classes = service.list_classes()
     if not classes:
-        print(c("  (sin clases registradas)", CYAN))
+        print(c("  (no classes registered)", CYAN))
         return
     for gym_class in classes:
         print(f"    {service.format_class(gym_class)}")
@@ -155,109 +155,109 @@ def show_classes() -> None:
 
 def prompt_class_fields(*, existing=None):
     if existing is None:
-        name = prompt_text("Nombre de la clase")
-        print(c("  Entrenadores disponibles:", YELLOW))
+        name = prompt_text("Class name")
+        print(c("  Available trainers:", YELLOW))
         show_trainers()
-        trainer_id = prompt_int("Id entrenador", min_value=1)
-        print(c("  Días: 0=lunes … 6=domingo", CYAN))
+        trainer_id = prompt_int("Trainer id", min_value=1)
+        print(c("  Days: 0=Monday … 6=Sunday", CYAN))
         for i, day_name in enumerate(DAY_NAMES):
             print(f"    {i} = {day_name}")
-        day = prompt_int("Día de la semana", min_value=0, max_value=6)
-        start = prompt_time("Hora inicio")
-        end = prompt_time("Hora fin")
-        capacity = prompt_int("Cupo máximo", min_value=1)
+        day = prompt_int("Day of week", min_value=0, max_value=6)
+        start = prompt_time("Start time")
+        end = prompt_time("End time")
+        capacity = prompt_int("Max capacity", min_value=1)
         return name, trainer_id, day, start, end, capacity
 
-    name = prompt_optional_text("Nombre de la clase", existing.name)
-    print(c("  Entrenadores disponibles:", YELLOW))
+    name = prompt_optional_text("Class name", existing.name)
+    print(c("  Available trainers:", YELLOW))
     show_trainers()
     trainer_id = prompt_optional_int(
-        "Id entrenador", existing.trainer_id, min_value=1
+        "Trainer id", existing.trainer_id, min_value=1
     )
-    print(c("  Días: 0=lunes … 6=domingo", CYAN))
+    print(c("  Days: 0=Monday … 6=Sunday", CYAN))
     for i, day_name in enumerate(DAY_NAMES):
         print(f"    {i} = {day_name}")
     day = prompt_optional_int(
-        "Día de la semana", existing.day_of_week, min_value=0, max_value=6
+        "Day of week", existing.day_of_week, min_value=0, max_value=6
     )
-    start = prompt_optional_time("Hora inicio", existing.start_time)
-    end = prompt_optional_time("Hora fin", existing.end_time)
-    capacity = prompt_optional_int("Cupo máximo", existing.capacity, min_value=1)
+    start = prompt_optional_time("Start time", existing.start_time)
+    end = prompt_optional_time("End time", existing.end_time)
+    capacity = prompt_optional_int("Max capacity", existing.capacity, min_value=1)
     return name, trainer_id, day, start, end, capacity
 
 
 def prompt_trainer_id(action: str) -> int:
     print(c(f"  {action}", YELLOW))
     show_trainers()
-    return prompt_int("Id del entrenador", min_value=1)
+    return prompt_int("Trainer id", min_value=1)
 
 
 def prompt_member_id(action: str) -> int:
     print(c(f"  {action}", YELLOW))
     show_members()
-    return prompt_int("Id del miembro", min_value=1)
+    return prompt_int("Member id", min_value=1)
 
 
 def prompt_class_id(action: str) -> int:
     print(c(f"  {action}", YELLOW))
     show_classes()
-    return prompt_int("Id de la clase", min_value=1)
+    return prompt_int("Class id", min_value=1)
 
 
 def run_trainer_menu() -> None:
     options = [
-        ("1", "Alta entrenador"),
-        ("2", "Listar entrenadores"),
-        ("3", "Ver por id"),
-        ("4", "Modificar"),
-        ("5", "Eliminar"),
-        ("0", "Volver"),
+        ("1", "Add trainer"),
+        ("2", "List trainers"),
+        ("3", "View by id"),
+        ("4", "Update"),
+        ("5", "Delete"),
+        ("0", "Back"),
     ]
     while True:
-        print_header("Entrenadores")
+        print_header("Trainers")
         print_menu(options)
-        option = input(c("\n  Opción: ", CYAN)).strip()
+        option = input(c("\n  Option: ", CYAN)).strip()
 
         try:
             if option == "1":
-                name = prompt_text("Nombre del entrenador")
+                name = prompt_text("Trainer name")
                 t = service.create_trainer(name)
-                print_success(f"Entrenador creado con id {t.id}")
+                print_success(f"Trainer created with id {t.id}")
                 pause()
 
             elif option == "2":
                 print()
-                print(c("  Entrenadores:", YELLOW))
+                print(c("  Trainers:", YELLOW))
                 show_trainers()
                 pause()
 
             elif option == "3":
-                trainer_id = prompt_trainer_id("Selecciona un entrenador")
+                trainer_id = prompt_trainer_id("Select a trainer")
                 t = service.get_trainer(trainer_id)
                 if t is None:
-                    print_error("Entrenador no encontrado")
+                    print_error("Trainer not found")
                 else:
                     print_success(f"[{t.id}] {t.name}")
                 pause()
 
             elif option == "4":
-                trainer_id = prompt_trainer_id("Entrenador a modificar")
-                name = prompt_text("Nuevo nombre")
+                trainer_id = prompt_trainer_id("Trainer to update")
+                name = prompt_text("New name")
                 t = service.update_trainer(trainer_id, name)
-                print_success(f"Entrenador actualizado: [{t.id}] {t.name}")
+                print_success(f"Trainer updated: [{t.id}] {t.name}")
                 pause()
 
             elif option == "5":
-                trainer_id = prompt_trainer_id("Entrenador a eliminar")
+                trainer_id = prompt_trainer_id("Trainer to delete")
                 service.delete_trainer(trainer_id)
-                print_success("Entrenador eliminado")
+                print_success("Trainer deleted")
                 pause()
 
             elif option == "0":
                 return
 
             else:
-                print_error("Opción no válida.")
+                print_error("Invalid option.")
 
         except service.BusinessError as e:
             print_error(str(e))
@@ -266,64 +266,64 @@ def run_trainer_menu() -> None:
             print_error(str(e))
             pause()
         except psycopg2.Error as e:
-            print_error(f"Base de datos: {e}")
+            print_error(f"Database: {e}")
             pause()
 
 
 def run_member_menu() -> None:
     options = [
-        ("1", "Alta miembro"),
-        ("2", "Listar miembros"),
-        ("3", "Ver por id"),
-        ("4", "Modificar"),
-        ("5", "Eliminar"),
-        ("0", "Volver"),
+        ("1", "Add member"),
+        ("2", "List members"),
+        ("3", "View by id"),
+        ("4", "Update"),
+        ("5", "Delete"),
+        ("0", "Back"),
     ]
     while True:
-        print_header("Miembros")
+        print_header("Members")
         print_menu(options)
-        option = input(c("\n  Opción: ", CYAN)).strip()
+        option = input(c("\n  Option: ", CYAN)).strip()
 
         try:
             if option == "1":
-                name = prompt_text("Nombre del miembro")
+                name = prompt_text("Member name")
                 m = service.create_member(name)
-                print_success(f"Miembro creado con id {m.id}")
+                print_success(f"Member created with id {m.id}")
                 pause()
 
             elif option == "2":
                 print()
-                print(c("  Miembros:", YELLOW))
+                print(c("  Members:", YELLOW))
                 show_members()
                 pause()
 
             elif option == "3":
-                member_id = prompt_member_id("Selecciona un miembro")
+                member_id = prompt_member_id("Select a member")
                 m = service.get_member(member_id)
                 if m is None:
-                    print_error("Miembro no encontrado")
+                    print_error("Member not found")
                 else:
                     print_success(f"[{m.id}] {m.name}")
                 pause()
 
             elif option == "4":
-                member_id = prompt_member_id("Miembro a modificar")
-                name = prompt_text("Nuevo nombre")
+                member_id = prompt_member_id("Member to update")
+                name = prompt_text("New name")
                 m = service.update_member(member_id, name)
-                print_success(f"Miembro actualizado: [{m.id}] {m.name}")
+                print_success(f"Member updated: [{m.id}] {m.name}")
                 pause()
 
             elif option == "5":
-                member_id = prompt_member_id("Miembro a eliminar")
+                member_id = prompt_member_id("Member to delete")
                 service.delete_member(member_id)
-                print_success("Miembro eliminado")
+                print_success("Member deleted")
                 pause()
 
             elif option == "0":
                 return
 
             else:
-                print_error("Opción no válida.")
+                print_error("Invalid option.")
 
         except service.BusinessError as e:
             print_error(str(e))
@@ -332,69 +332,69 @@ def run_member_menu() -> None:
             print_error(str(e))
             pause()
         except psycopg2.Error as e:
-            print_error(f"Base de datos: {e}")
+            print_error(f"Database: {e}")
             pause()
 
 
 def run_class_menu() -> None:
     options = [
-        ("1", "Alta clase"),
-        ("2", "Listar clases"),
-        ("3", "Ver por id"),
-        ("4", "Modificar"),
-        ("5", "Eliminar"),
-        ("0", "Volver"),
+        ("1", "Add class"),
+        ("2", "List classes"),
+        ("3", "View by id"),
+        ("4", "Update"),
+        ("5", "Delete"),
+        ("0", "Back"),
     ]
     while True:
-        print_header("Clases")
+        print_header("Classes")
         print_menu(options)
-        option = input(c("\n  Opción: ", CYAN)).strip()
+        option = input(c("\n  Option: ", CYAN)).strip()
 
         try:
             if option == "1":
                 fields = prompt_class_fields()
                 gym_class = service.create_class(*fields)
-                print_success(f"Clase creada con id {gym_class.id}")
+                print_success(f"Class created with id {gym_class.id}")
                 pause()
 
             elif option == "2":
                 print()
-                print(c("  Clases:", YELLOW))
+                print(c("  Classes:", YELLOW))
                 show_classes()
                 pause()
 
             elif option == "3":
-                class_id = prompt_class_id("Selecciona una clase")
+                class_id = prompt_class_id("Select a class")
                 gym_class = service.get_class(class_id)
                 if gym_class is None:
-                    print_error("Clase no encontrada")
+                    print_error("Class not found")
                 else:
                     print_success(service.format_class(gym_class))
                 pause()
 
             elif option == "4":
-                class_id = prompt_class_id("Clase a modificar")
+                class_id = prompt_class_id("Class to update")
                 existing = service.get_class(class_id)
                 if existing is None:
-                    print_error("Clase no encontrada")
+                    print_error("Class not found")
                     pause()
                     continue
                 fields = prompt_class_fields(existing=existing)
                 gym_class = service.update_class(class_id, *fields)
-                print_success(f"Clase actualizada: {service.format_class(gym_class)}")
+                print_success(f"Class updated: {service.format_class(gym_class)}")
                 pause()
 
             elif option == "5":
-                class_id = prompt_class_id("Clase a eliminar")
+                class_id = prompt_class_id("Class to delete")
                 service.delete_class(class_id)
-                print_success("Clase eliminada")
+                print_success("Class deleted")
                 pause()
 
             elif option == "0":
                 return
 
             else:
-                print_error("Opción no válida.")
+                print_error("Invalid option.")
 
         except service.BusinessError as e:
             print_error(str(e))
@@ -403,41 +403,41 @@ def run_class_menu() -> None:
             print_error(str(e))
             pause()
         except psycopg2.Error as e:
-            print_error(f"Base de datos: {e}")
+            print_error(f"Database: {e}")
             pause()
 
 
 def run_operations_menu() -> None:
     options = [
-        ("1", "Inscribir miembro en clase"),
-        ("2", "Registrar asistencia"),
-        ("0", "Volver"),
+        ("1", "Enroll member in class"),
+        ("2", "Record attendance"),
+        ("0", "Back"),
     ]
     while True:
-        print_header("Inscripciones y asistencia")
+        print_header("Enrollments and attendance")
         print_menu(options)
-        option = input(c("\n  Opción: ", CYAN)).strip()
+        option = input(c("\n  Option: ", CYAN)).strip()
 
         try:
             if option == "1":
-                class_id = prompt_class_id("Clase para inscripción")
-                member_id = prompt_member_id("Miembro a inscribir")
+                class_id = prompt_class_id("Class for enrollment")
+                member_id = prompt_member_id("Member to enroll")
                 service.enroll_member(class_id, member_id)
-                print_success("Miembro inscrito correctamente")
+                print_success("Member enrolled successfully")
                 pause()
 
             elif option == "2":
-                class_id = prompt_class_id("Clase")
-                member_id = prompt_member_id("Miembro")
+                class_id = prompt_class_id("Class")
+                member_id = prompt_member_id("Member")
                 service.mark_attendance(class_id, member_id)
-                print_success("Asistencia registrada")
+                print_success("Attendance recorded")
                 pause()
 
             elif option == "0":
                 return
 
             else:
-                print_error("Opción no válida.")
+                print_error("Invalid option.")
 
         except service.BusinessError as e:
             print_error(str(e))
@@ -446,7 +446,7 @@ def run_operations_menu() -> None:
             print_error(str(e))
             pause()
         except psycopg2.Error as e:
-            print_error(f"Base de datos: {e}")
+            print_error(f"Database: {e}")
             pause()
 
 
@@ -454,17 +454,17 @@ def main() -> None:
     init_schema()
 
     main_options = [
-        ("1", "Entrenadores"),
-        ("2", "Miembros"),
-        ("3", "Clases"),
-        ("4", "Inscripciones y asistencia"),
-        ("0", "Salir"),
+        ("1", "Trainers"),
+        ("2", "Members"),
+        ("3", "Classes"),
+        ("4", "Enrollments and attendance"),
+        ("0", "Exit"),
     ]
 
     while True:
-        print_header("Gestión de Gimnasio")
+        print_header("Gym Management")
         print_menu(main_options)
-        option = input(c("\n  Opción: ", CYAN)).strip()
+        option = input(c("\n  Option: ", CYAN)).strip()
 
         if option == "1":
             run_trainer_menu()
@@ -476,10 +476,10 @@ def main() -> None:
             run_operations_menu()
         elif option == "0":
             print()
-            print_success("Hasta luego.")
+            print_success("Goodbye.")
             break
         else:
-            print_error("Opción no válida.")
+            print_error("Invalid option.")
             pause()
 
 
