@@ -76,6 +76,33 @@ def test_delete_trainer_not_found():
         service.delete_trainer(999)
 
 
+def test_list_classes_by_trainer():
+    t1 = service.create_trainer("Ana")
+    t2 = service.create_trainer("Luis")
+    c1 = service.create_class(
+        "Spinning",
+        t1.id,
+        day_of_week=0,
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+        capacity=10,
+    )
+    service.create_class(
+        "Yoga",
+        t2.id,
+        day_of_week=1,
+        start_time=time(11, 0),
+        end_time=time(12, 0),
+        capacity=8,
+    )
+    classes = service.list_classes_by_trainer(t1.id)
+    assert len(classes) == 1
+    assert classes[0].id == c1.id
+    assert classes[0].name == "Spinning"
+    assert service.list_classes_by_trainer(t2.id)[0].name == "Yoga"
+    assert service.list_classes_by_trainer(service.create_trainer("Solo").id) == []
+
+
 def test_delete_trainer_with_classes():
     trainer = service.create_trainer("Con clases")
     service.create_class(

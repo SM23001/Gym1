@@ -111,6 +111,22 @@ def count_classes_by_trainer(trainer_id: int) -> int:
     return int(count)
 
 
+def list_classes_by_trainer(trainer_id: int) -> List[GymClass]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT id, name, trainer_id, day_of_week, start_time, end_time, capacity
+                FROM classes
+                WHERE trainer_id = %s
+                ORDER BY day_of_week, start_time
+                """,
+                (trainer_id,),
+            )
+            rows = cur.fetchall()
+    return [GymClass(**r) for r in rows]
+
+
 def get_member(member_id: int) -> Optional[Member]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
