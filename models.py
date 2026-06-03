@@ -24,3 +24,11 @@ class GymClass:
     end_time: time
     capacity: int
 
+
+@dataclass
+class Enrollment:
+    class_id: int
+    member_id: int
+    class_name: str
+    member_name: str
+

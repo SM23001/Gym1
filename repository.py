@@ -4,7 +4,7 @@ from typing import List, Optional
 from psycopg2.extras import RealDictCursor
 
 from db import get_connection
-from models import Trainer, Member, GymClass
+from models import Trainer, Member, GymClass, Enrollment
 
 
 def create_trainer(name: str) -> Trainer:
@@ -272,6 +272,38 @@ def enroll_member(class_id: int, member_id: int) -> None:
                 """,
                 (class_id, member_id),
             )
+
+
+def list_enrollments() -> List[Enrollment]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT e.class_id,
+                       e.member_id,
+                       c.name AS class_name,
+                       m.name AS member_name
+                FROM enrollments e
+                JOIN classes c ON c.id = e.class_id
+                JOIN members m ON m.id = e.member_id
+                ORDER BY e.class_id, e.member_id
+                """
+            )
+            rows = cur.fetchall()
+    return [Enrollment(**r) for r in rows]
+
+
+def delete_enrollment(class_id: int, member_id: int) -> bool:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM enrollments
+                WHERE class_id = %s AND member_id = %s
+                """,
+                (class_id, member_id),
+            )
+            return cur.rowcount > 0
 
 
 def list_member_classes(member_id: int) -> List[GymClass]:
