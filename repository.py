@@ -4,7 +4,7 @@ from typing import List, Optional
 from psycopg2.extras import RealDictCursor
 
 from db import get_connection
-from models import Trainer, Member, GymClass, Enrollment
+from models import Trainer, Member, GymClass, Enrollment, Attendance
 
 
 def create_trainer(name: str) -> Trainer:
@@ -345,6 +345,19 @@ def list_class_members(class_id: int) -> List[Member]:
     return [Member(**r) for r in rows]
 
 
+def _attendance_select() -> str:
+    return """
+        SELECT a.class_id,
+               a.member_id,
+               a.attended_at,
+               c.name AS class_name,
+               m.name AS member_name
+        FROM attendance a
+        JOIN classes c ON c.id = a.class_id
+        JOIN members m ON m.id = a.member_id
+    """
+
+
 def mark_attendance(class_id: int, member_id: int) -> None:
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -355,4 +368,80 @@ def mark_attendance(class_id: int, member_id: int) -> None:
                 """,
                 (class_id, member_id),
             )
+
+
+def list_attendance() -> List[Attendance]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                _attendance_select() + " ORDER BY a.attended_at DESC, a.class_id, a.member_id"
+            )
+            rows = cur.fetchall()
+    return [Attendance(**r) for r in rows]
+
+
+def list_attendance_by_class(class_id: int) -> List[Attendance]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                _attendance_select()
+                + " WHERE a.class_id = %s ORDER BY a.attended_at DESC, a.member_id",
+                (class_id,),
+            )
+            rows = cur.fetchall()
+    return [Attendance(**r) for r in rows]
+
+
+def list_attendance_by_member(member_id: int) -> List[Attendance]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                _attendance_select()
+                + " WHERE a.member_id = %s ORDER BY a.attended_at DESC, a.class_id",
+                (member_id,),
+            )
+            rows = cur.fetchall()
+    return [Attendance(**r) for r in rows]
+
+
+def list_attendance_for_pair(class_id: int, member_id: int) -> List[Attendance]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                _attendance_select()
+                + """
+                WHERE a.class_id = %s AND a.member_id = %s
+                ORDER BY a.attended_at DESC
+                """,
+                (class_id, member_id),
+            )
+            rows = cur.fetchall()
+    return [Attendance(**r) for r in rows]
+
+
+def has_attendance(class_id: int, member_id: int) -> bool:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 1 FROM attendance
+                WHERE class_id = %s AND member_id = %s
+                LIMIT 1
+                """,
+                (class_id, member_id),
+            )
+            return cur.fetchone() is not None
+
+
+def delete_attendance(class_id: int, member_id: int, attended_at) -> bool:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM attendance
+                WHERE class_id = %s AND member_id = %s AND attended_at = %s
+                """,
+                (class_id, member_id, attended_at),
+            )
+            return cur.rowcount > 0
 
