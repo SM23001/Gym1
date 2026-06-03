@@ -198,6 +198,10 @@ def list_member_classes(member_id: int):
     return repo.list_member_classes(member_id)
 
 
+def list_class_members(class_id: int):
+    return repo.list_class_members(class_id)
+
+
 def format_class(gym_class: GymClass) -> str:
     return (
         f"[{gym_class.id}] {gym_class.name} - Entrenador {gym_class.trainer_id} - "
