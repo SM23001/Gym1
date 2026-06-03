@@ -1,6 +1,6 @@
 from datetime import time
 
-from models import GymClass, Enrollment
+from models import GymClass, Enrollment, Attendance
 import repository as repo
 
 
@@ -210,9 +210,63 @@ def format_enrollment(enrollment: Enrollment) -> str:
 
 
 def mark_attendance(class_id: int, member_id: int) -> None:
+    if repo.get_class(class_id) is None:
+        raise BusinessError("Clase no existe")
+    if not repo.get_member(member_id):
+        raise BusinessError("Miembro no existe")
     if not repo.is_member_enrolled(class_id, member_id):
         raise BusinessError("El miembro no está inscrito en esta clase")
     repo.mark_attendance(class_id, member_id)
+
+
+def list_attendance():
+    return repo.list_attendance()
+
+
+def list_attendance_by_class(class_id: int):
+    if repo.get_class(class_id) is None:
+        raise BusinessError("Clase no existe")
+    return repo.list_attendance_by_class(class_id)
+
+
+def list_attendance_by_member(member_id: int):
+    if not repo.get_member(member_id):
+        raise BusinessError("Miembro no existe")
+    return repo.list_attendance_by_member(member_id)
+
+
+def has_attendance(class_id: int, member_id: int) -> bool:
+    if repo.get_class(class_id) is None:
+        raise BusinessError("Clase no existe")
+    if not repo.get_member(member_id):
+        raise BusinessError("Miembro no existe")
+    return repo.has_attendance(class_id, member_id)
+
+
+def list_attendance_for_pair(class_id: int, member_id: int):
+    if repo.get_class(class_id) is None:
+        raise BusinessError("Clase no existe")
+    if not repo.get_member(member_id):
+        raise BusinessError("Miembro no existe")
+    return repo.list_attendance_for_pair(class_id, member_id)
+
+
+def delete_attendance(class_id: int, member_id: int, attended_at) -> None:
+    if repo.get_class(class_id) is None:
+        raise BusinessError("Clase no existe")
+    if not repo.get_member(member_id):
+        raise BusinessError("Miembro no existe")
+    if not repo.delete_attendance(class_id, member_id, attended_at):
+        raise BusinessError("Registro de asistencia no encontrado")
+
+
+def format_attendance(record: Attendance) -> str:
+    when = record.attended_at.strftime("%Y-%m-%d %H:%M:%S")
+    return (
+        f"Class [{record.class_id}] {record.class_name} — "
+        f"Member [{record.member_id}] {record.member_name} — "
+        f"{when}"
+    )
 
 
 def list_classes():

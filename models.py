@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import time
+from datetime import datetime, time
 
 
 @dataclass
@@ -29,6 +29,15 @@ class GymClass:
 class Enrollment:
     class_id: int
     member_id: int
+    class_name: str
+    member_name: str
+
+
+@dataclass
+class Attendance:
+    class_id: int
+    member_id: int
+    attended_at: datetime
     class_name: str
     member_name: str
 

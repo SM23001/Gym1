@@ -295,6 +295,10 @@ python3 -m pytest tests/test_member_crud.py::test_list_member_classes -q
 .venv/bin/python -m pytest tests/test_enrollment_crud.py -v
 ```
 
+```bash
+pytest tests/test_attendance_crud.py -q
+```
+
 
 **Important:** tests run `TRUNCATE` on every case. Do not use a database you need to keep; for a dedicated test DB you can set e.g. `GYM_DB_NAME=gymdb_test` in `.env`.
 

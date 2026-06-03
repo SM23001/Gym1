@@ -557,9 +557,35 @@ def run_enrollment_menu() -> None:
             pause()
 
 
+def show_attendance_records(records) -> None:
+    if not records:
+        print(c("  (no attendance records)", CYAN))
+        return
+    for record in records:
+        print(f"    {service.format_attendance(record)}")
+
+
+def prompt_attendance_to_delete(class_id: int, member_id: int):
+    records = service.list_attendance_for_pair(class_id, member_id)
+    if not records:
+        raise service.BusinessError("No attendance records for this class and member")
+    if len(records) == 1:
+        return records[0].attended_at
+    print(c("  Records for this class and member:", YELLOW))
+    for i, record in enumerate(records, start=1):
+        print(f"    {i}. {service.format_attendance(record)}")
+    index = prompt_int("Record number to delete", min_value=1, max_value=len(records))
+    return records[index - 1].attended_at
+
+
 def run_attendance_menu() -> None:
     options = [
         ("1", "Record attendance"),
+        ("2", "List attendance"),
+        ("3", "View attendance"),
+        ("4", "Delete attendance record"),
+        ("5", "Attendance by class"),
+        ("6", "Attendance by member"),
         ("0", "Back"),
     ]
     while True:
@@ -573,6 +599,63 @@ def run_attendance_menu() -> None:
                 member_id = prompt_member_id("Member")
                 service.mark_attendance(class_id, member_id)
                 print_success("Attendance recorded")
+                pause()
+
+            elif option == "2":
+                print()
+                print(c("  Attendance:", YELLOW))
+                show_attendance_records(service.list_attendance())
+                pause()
+
+            elif option == "3":
+                class_id = prompt_class_id("Class")
+                member_id = prompt_member_id("Member")
+                records = service.list_attendance_for_pair(class_id, member_id)
+                if not records:
+                    print_error("No attendance records for this class and member")
+                else:
+                    print()
+                    print(c("  Attendance records:", YELLOW))
+                    show_attendance_records(records)
+                pause()
+
+            elif option == "4":
+                class_id = prompt_class_id("Class")
+                member_id = prompt_member_id("Member")
+                attended_at = prompt_attendance_to_delete(class_id, member_id)
+                service.delete_attendance(class_id, member_id, attended_at)
+                print_success("Attendance record deleted")
+                pause()
+
+            elif option == "5":
+                class_id = prompt_class_id("Select a class")
+                gym_class = service.get_class(class_id)
+                if gym_class is None:
+                    print_error("Class not found")
+                else:
+                    print()
+                    print(
+                        c(
+                            f"  Attendance for [{gym_class.id}] {gym_class.name}:",
+                            YELLOW,
+                        )
+                    )
+                    show_attendance_records(
+                        service.list_attendance_by_class(class_id)
+                    )
+                pause()
+
+            elif option == "6":
+                member_id = prompt_member_id("Select a member")
+                m = service.get_member(member_id)
+                if m is None:
+                    print_error("Member not found")
+                else:
+                    print()
+                    print(c(f"  Attendance for [{m.id}] {m.name}:", YELLOW))
+                    show_attendance_records(
+                        service.list_attendance_by_member(member_id)
+                    )
                 pause()
 
             elif option == "0":
