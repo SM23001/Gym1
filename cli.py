@@ -458,14 +458,13 @@ def run_class_menu() -> None:
             pause()
 
 
-def run_operations_menu() -> None:
+def run_enrollment_menu() -> None:
     options = [
         ("1", "Enroll member in class"),
-        ("2", "Record attendance"),
         ("0", "Back"),
     ]
     while True:
-        print_header("Enrollments and attendance")
+        print_header("Enrollment")
         print_menu(options)
         option = input(c("\n  Option: ", CYAN)).strip()
 
@@ -477,7 +476,35 @@ def run_operations_menu() -> None:
                 print_success("Member enrolled successfully")
                 pause()
 
-            elif option == "2":
+            elif option == "0":
+                return
+
+            else:
+                print_error("Invalid option.")
+
+        except service.BusinessError as e:
+            print_error(str(e))
+            pause()
+        except ValueError as e:
+            print_error(str(e))
+            pause()
+        except psycopg2.Error as e:
+            print_error(f"Database: {e}")
+            pause()
+
+
+def run_attendance_menu() -> None:
+    options = [
+        ("1", "Record attendance"),
+        ("0", "Back"),
+    ]
+    while True:
+        print_header("Attendance")
+        print_menu(options)
+        option = input(c("\n  Option: ", CYAN)).strip()
+
+        try:
+            if option == "1":
                 class_id = prompt_class_id("Class")
                 member_id = prompt_member_id("Member")
                 service.mark_attendance(class_id, member_id)
@@ -508,7 +535,8 @@ def main() -> None:
         ("1", "Trainers"),
         ("2", "Members"),
         ("3", "Classes"),
-        ("4", "Enrollments and attendance"),
+        ("4", "Enrollment"),
+        ("5", "Attendance"),
         ("0", "Exit"),
     ]
 
@@ -524,7 +552,9 @@ def main() -> None:
         elif option == "3":
             run_class_menu()
         elif option == "4":
-            run_operations_menu()
+            run_enrollment_menu()
+        elif option == "5":
+            run_attendance_menu()
         elif option == "0":
             print()
             print_success("Goodbye.")
