@@ -76,6 +76,34 @@ def test_delete_member_not_found():
         service.delete_member(999)
 
 
+def test_list_member_classes():
+    trainer = service.create_trainer("Ana")
+    m1 = service.create_member("Juan")
+    m2 = service.create_member("María")
+    c1 = service.create_class(
+        "Spinning",
+        trainer.id,
+        day_of_week=0,
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+        capacity=10,
+    )
+    service.create_class(
+        "Yoga",
+        trainer.id,
+        day_of_week=1,
+        start_time=time(11, 0),
+        end_time=time(12, 0),
+        capacity=8,
+    )
+    service.enroll_member(c1.id, m1.id)
+    classes = service.list_member_classes(m1.id)
+    assert len(classes) == 1
+    assert classes[0].id == c1.id
+    assert classes[0].name == "Spinning"
+    assert service.list_member_classes(m2.id) == []
+
+
 def test_delete_member_cascades_enrollments():
     trainer = service.create_trainer("T")
     member = service.create_member("M")

@@ -288,6 +288,10 @@ Or run a specific file with the virtual environment Python directly (no need to 
 ```bash
 pytest tests/test_trainer_crud.py::test_list_classes_by_trainer -q
 ```
+```bash
+python3 -m pytest tests/test_member_crud.py::test_list_member_classes -q
+```
+
 
 **Important:** tests run `TRUNCATE` on every case. Do not use a database you need to keep; for a dedicated test DB you can set e.g. `GYM_DB_NAME=gymdb_test` in `.env`.
 
