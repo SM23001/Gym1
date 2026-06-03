@@ -1,6 +1,6 @@
 from datetime import time
 
-from models import GymClass
+from models import GymClass, Enrollment
 import repository as repo
 
 
@@ -178,6 +178,35 @@ def enroll_member(class_id: int, member_id: int) -> None:
             )
 
     repo.enroll_member(class_id, member_id)
+
+
+def unenroll_member(class_id: int, member_id: int) -> None:
+    if repo.get_class(class_id) is None:
+        raise BusinessError("Clase no existe")
+    if not repo.get_member(member_id):
+        raise BusinessError("Miembro no existe")
+    if not repo.is_member_enrolled(class_id, member_id):
+        raise BusinessError("El miembro no está inscrito en esta clase")
+    repo.delete_enrollment(class_id, member_id)
+
+
+def is_enrolled(class_id: int, member_id: int) -> bool:
+    if repo.get_class(class_id) is None:
+        raise BusinessError("Clase no existe")
+    if not repo.get_member(member_id):
+        raise BusinessError("Miembro no existe")
+    return repo.is_member_enrolled(class_id, member_id)
+
+
+def list_enrollments():
+    return repo.list_enrollments()
+
+
+def format_enrollment(enrollment: Enrollment) -> str:
+    return (
+        f"Class [{enrollment.class_id}] {enrollment.class_name} — "
+        f"Member [{enrollment.member_id}] {enrollment.member_name}"
+    )
 
 
 def mark_attendance(class_id: int, member_id: int) -> None:

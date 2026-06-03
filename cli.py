@@ -461,6 +461,11 @@ def run_class_menu() -> None:
 def run_enrollment_menu() -> None:
     options = [
         ("1", "Enroll member in class"),
+        ("2", "List enrollments"),
+        ("3", "View enrollment"),
+        ("4", "Unenroll member"),
+        ("5", "Members of class"),
+        ("6", "Classes of member"),
         ("0", "Back"),
     ]
     while True:
@@ -474,6 +479,65 @@ def run_enrollment_menu() -> None:
                 member_id = prompt_member_id("Member to enroll")
                 service.enroll_member(class_id, member_id)
                 print_success("Member enrolled successfully")
+                pause()
+
+            elif option == "2":
+                print()
+                print(c("  Enrollments:", YELLOW))
+                enrollments = service.list_enrollments()
+                if not enrollments:
+                    print(c("  (no enrollments)", CYAN))
+                else:
+                    for enrollment in enrollments:
+                        print(f"    {service.format_enrollment(enrollment)}")
+                pause()
+
+            elif option == "3":
+                class_id = prompt_class_id("Class")
+                member_id = prompt_member_id("Member")
+                if service.is_enrolled(class_id, member_id):
+                    print_success("Member is enrolled in this class")
+                else:
+                    print_error("Member is not enrolled in this class")
+                pause()
+
+            elif option == "4":
+                class_id = prompt_class_id("Class to unenroll from")
+                member_id = prompt_member_id("Member to unenroll")
+                service.unenroll_member(class_id, member_id)
+                print_success("Member unenrolled successfully")
+                pause()
+
+            elif option == "5":
+                class_id = prompt_class_id("Select a class")
+                gym_class = service.get_class(class_id)
+                if gym_class is None:
+                    print_error("Class not found")
+                else:
+                    print()
+                    print(c(f"  Members of [{gym_class.id}] {gym_class.name}:", YELLOW))
+                    members = service.list_class_members(class_id)
+                    if not members:
+                        print(c("  (no members enrolled in this class)", CYAN))
+                    else:
+                        for m in members:
+                            print(f"    [{m.id}] {m.name}")
+                pause()
+
+            elif option == "6":
+                member_id = prompt_member_id("Select a member")
+                m = service.get_member(member_id)
+                if m is None:
+                    print_error("Member not found")
+                else:
+                    print()
+                    print(c(f"  Classes for [{m.id}] {m.name}:", YELLOW))
+                    classes = service.list_member_classes(member_id)
+                    if not classes:
+                        print(c("  (no classes for this member)", CYAN))
+                    else:
+                        for gym_class in classes:
+                            print(f"    {service.format_class(gym_class)}")
                 pause()
 
             elif option == "0":
