@@ -2,17 +2,22 @@ from datetime import datetime, time
 
 import psycopg2
 
-from colors import (
-    BOLD,
-    BRIGHT_CYAN,
-    CYAN,
-    GREEN,
-    RED,
-    YELLOW,
-    c,
-)
+from colors import CYAN, YELLOW, c
 from db import init_schema
 import service
+from ui import (
+    clear_screen,
+    pause,
+    print_banner,
+    print_empty,
+    print_error,
+    print_header,
+    print_menu,
+    print_section,
+    print_success,
+    print_table,
+    prompt_option,
+)
 
 DAY_NAMES = (
     "Monday",
@@ -27,32 +32,6 @@ DAY_NAMES = (
 
 def parse_time(hhmm: str) -> time:
     return datetime.strptime(hhmm.strip(), "%H:%M").time()
-
-
-def print_header(title: str) -> None:
-    width = max(len(title) + 4, 40)
-    line = "─" * width
-    print()
-    print(c(line, CYAN))
-    print(c(f"  {title}", BOLD + BRIGHT_CYAN))
-    print(c(line, CYAN))
-
-
-def print_menu(options: list[tuple[str, str]]) -> None:
-    for key, label in options:
-        print(c(f"  {key}.", YELLOW), label)
-
-
-def pause() -> None:
-    input(c("\n  Press Enter to continue… ", CYAN))
-
-
-def print_success(message: str) -> None:
-    print(c(f"  ✓ {message}", GREEN))
-
-
-def print_error(message: str) -> None:
-    print(c(f"  ✗ {message}", RED))
 
 
 def prompt_text(label: str, *, required: bool = True) -> str:
@@ -129,28 +108,80 @@ def prompt_optional_time(label: str, current: time) -> time:
 def show_trainers() -> None:
     trainers = service.list_trainers()
     if not trainers:
-        print(c("  (no trainers registered)", CYAN))
+        print_empty("(no trainers registered)")
         return
-    for t in trainers:
-        print(f"    [{t.id}] {t.name}")
+    print_table(
+        ["ID", "Name"],
+        [[str(trainer.id), trainer.name] for trainer in trainers],
+    )
 
 
 def show_members() -> None:
     members = service.list_members()
     if not members:
-        print(c("  (no members registered)", CYAN))
+        print_empty("(no members registered)")
         return
-    for m in members:
-        print(f"    [{m.id}] {m.name}")
+    print_table(
+        ["ID", "Name"],
+        [[str(member.id), member.name] for member in members],
+    )
 
 
 def show_classes() -> None:
     classes = service.list_classes()
     if not classes:
-        print(c("  (no classes registered)", CYAN))
+        print_empty("(no classes registered)")
         return
-    for gym_class in classes:
-        print(f"    {service.format_class(gym_class)}")
+    print_table(
+        ["ID", "Name", "Trainer", "Schedule", "Capacity"],
+        [
+            [
+                str(gym_class.id),
+                gym_class.name,
+                str(gym_class.trainer_id),
+                (
+                    f"{DAY_NAMES[gym_class.day_of_week]} "
+                    f"{gym_class.start_time.strftime('%H:%M')}-"
+                    f"{gym_class.end_time.strftime('%H:%M')}"
+                ),
+                str(gym_class.capacity),
+            ]
+            for gym_class in classes
+        ],
+    )
+
+
+def show_class_rows(classes, *, empty_message: str = "(no classes)") -> None:
+    if not classes:
+        print_empty(empty_message)
+        return
+    print_table(
+        ["ID", "Name", "Trainer", "Schedule", "Capacity"],
+        [
+            [
+                str(gym_class.id),
+                gym_class.name,
+                str(gym_class.trainer_id),
+                (
+                    f"{DAY_NAMES[gym_class.day_of_week]} "
+                    f"{gym_class.start_time.strftime('%H:%M')}-"
+                    f"{gym_class.end_time.strftime('%H:%M')}"
+                ),
+                str(gym_class.capacity),
+            ]
+            for gym_class in classes
+        ],
+    )
+
+
+def show_member_rows(members, *, empty_message: str = "(no members)") -> None:
+    if not members:
+        print_empty(empty_message)
+        return
+    print_table(
+        ["ID", "Name"],
+        [[str(member.id), member.name] for member in members],
+    )
 
 
 def prompt_class_fields(*, existing=None):
@@ -187,19 +218,19 @@ def prompt_class_fields(*, existing=None):
 
 
 def prompt_trainer_id(action: str) -> int:
-    print(c(f"  {action}", YELLOW))
+    print_section(action)
     show_trainers()
     return prompt_int("Trainer id", min_value=1)
 
 
 def prompt_member_id(action: str) -> int:
-    print(c(f"  {action}", YELLOW))
+    print_section(action)
     show_members()
     return prompt_int("Member id", min_value=1)
 
 
 def prompt_class_id(action: str) -> int:
-    print(c(f"  {action}", YELLOW))
+    print_section(action)
     show_classes()
     return prompt_int("Class id", min_value=1)
 
@@ -215,9 +246,10 @@ def run_trainer_menu() -> None:
         ("0", "Back"),
     ]
     while True:
+        clear_screen()
         print_header("Trainers")
         print_menu(options)
-        option = input(c("\n  Option: ", CYAN)).strip()
+        option = prompt_option()
 
         try:
             if option == "1":
@@ -227,8 +259,7 @@ def run_trainer_menu() -> None:
                 pause()
 
             elif option == "2":
-                print()
-                print(c("  Trainers:", YELLOW))
+                print_section("Trainers")
                 show_trainers()
                 pause()
 
@@ -260,14 +291,11 @@ def run_trainer_menu() -> None:
                 if t is None:
                     print_error("Trainer not found")
                 else:
-                    print()
-                    print(c(f"  Classes for [{t.id}] {t.name}:", YELLOW))
-                    classes = service.list_classes_by_trainer(trainer_id)
-                    if not classes:
-                        print(c("  (no classes for this trainer)", CYAN))
-                    else:
-                        for gym_class in classes:
-                            print(f"    {service.format_class(gym_class)}")
+                    print_section(f"Classes for [{t.id}] {t.name}")
+                    show_class_rows(
+                        service.list_classes_by_trainer(trainer_id),
+                        empty_message="(no classes for this trainer)",
+                    )
                 pause()
 
             elif option == "0":
@@ -298,9 +326,10 @@ def run_member_menu() -> None:
         ("0", "Back"),
     ]
     while True:
+        clear_screen()
         print_header("Members")
         print_menu(options)
-        option = input(c("\n  Option: ", CYAN)).strip()
+        option = prompt_option()
 
         try:
             if option == "1":
@@ -310,8 +339,7 @@ def run_member_menu() -> None:
                 pause()
 
             elif option == "2":
-                print()
-                print(c("  Members:", YELLOW))
+                print_section("Members")
                 show_members()
                 pause()
 
@@ -343,14 +371,11 @@ def run_member_menu() -> None:
                 if m is None:
                     print_error("Member not found")
                 else:
-                    print()
-                    print(c(f"  Classes for [{m.id}] {m.name}:", YELLOW))
-                    classes = service.list_member_classes(member_id)
-                    if not classes:
-                        print(c("  (no classes for this member)", CYAN))
-                    else:
-                        for gym_class in classes:
-                            print(f"    {service.format_class(gym_class)}")
+                    print_section(f"Classes for [{m.id}] {m.name}")
+                    show_class_rows(
+                        service.list_member_classes(member_id),
+                        empty_message="(no classes for this member)",
+                    )
                 pause()
 
             elif option == "0":
@@ -381,9 +406,10 @@ def run_class_menu() -> None:
         ("0", "Back"),
     ]
     while True:
+        clear_screen()
         print_header("Classes")
         print_menu(options)
-        option = input(c("\n  Option: ", CYAN)).strip()
+        option = prompt_option()
 
         try:
             if option == "1":
@@ -393,8 +419,7 @@ def run_class_menu() -> None:
                 pause()
 
             elif option == "2":
-                print()
-                print(c("  Classes:", YELLOW))
+                print_section("Classes")
                 show_classes()
                 pause()
 
@@ -431,14 +456,12 @@ def run_class_menu() -> None:
                 if gym_class is None:
                     print_error("Class not found")
                 else:
-                    print()
-                    print(c(f"  Members of [{gym_class.id}] {gym_class.name}:", YELLOW))
+                    print_section(f"Members of [{gym_class.id}] {gym_class.name}")
                     members = service.list_class_members(class_id)
                     if not members:
-                        print(c("  (no members enrolled in this class)", CYAN))
+                        print_empty("(no members enrolled in this class)")
                     else:
-                        for m in members:
-                            print(f"    [{m.id}] {m.name}")
+                        show_member_rows(members)
                 pause()
 
             elif option == "0":
@@ -469,9 +492,10 @@ def run_enrollment_menu() -> None:
         ("0", "Back"),
     ]
     while True:
+        clear_screen()
         print_header("Enrollment")
         print_menu(options)
-        option = input(c("\n  Option: ", CYAN)).strip()
+        option = prompt_option()
 
         try:
             if option == "1":
@@ -482,14 +506,21 @@ def run_enrollment_menu() -> None:
                 pause()
 
             elif option == "2":
-                print()
-                print(c("  Enrollments:", YELLOW))
+                print_section("Enrollments")
                 enrollments = service.list_enrollments()
                 if not enrollments:
-                    print(c("  (no enrollments)", CYAN))
+                    print_empty("(no enrollments)")
                 else:
-                    for enrollment in enrollments:
-                        print(f"    {service.format_enrollment(enrollment)}")
+                    print_table(
+                        ["Class", "Member"],
+                        [
+                            [
+                                f"[{enrollment.class_id}] {enrollment.class_name}",
+                                f"[{enrollment.member_id}] {enrollment.member_name}",
+                            ]
+                            for enrollment in enrollments
+                        ],
+                    )
                 pause()
 
             elif option == "3":
@@ -514,14 +545,12 @@ def run_enrollment_menu() -> None:
                 if gym_class is None:
                     print_error("Class not found")
                 else:
-                    print()
-                    print(c(f"  Members of [{gym_class.id}] {gym_class.name}:", YELLOW))
+                    print_section(f"Members of [{gym_class.id}] {gym_class.name}")
                     members = service.list_class_members(class_id)
                     if not members:
-                        print(c("  (no members enrolled in this class)", CYAN))
+                        print_empty("(no members enrolled in this class)")
                     else:
-                        for m in members:
-                            print(f"    [{m.id}] {m.name}")
+                        show_member_rows(members)
                 pause()
 
             elif option == "6":
@@ -530,14 +559,11 @@ def run_enrollment_menu() -> None:
                 if m is None:
                     print_error("Member not found")
                 else:
-                    print()
-                    print(c(f"  Classes for [{m.id}] {m.name}:", YELLOW))
-                    classes = service.list_member_classes(member_id)
-                    if not classes:
-                        print(c("  (no classes for this member)", CYAN))
-                    else:
-                        for gym_class in classes:
-                            print(f"    {service.format_class(gym_class)}")
+                    print_section(f"Classes for [{m.id}] {m.name}")
+                    show_class_rows(
+                        service.list_member_classes(member_id),
+                        empty_message="(no classes for this member)",
+                    )
                 pause()
 
             elif option == "0":
@@ -559,10 +585,19 @@ def run_enrollment_menu() -> None:
 
 def show_attendance_records(records) -> None:
     if not records:
-        print(c("  (no attendance records)", CYAN))
+        print_empty("(no attendance records)")
         return
-    for record in records:
-        print(f"    {service.format_attendance(record)}")
+    print_table(
+        ["Class", "Member", "Attended at"],
+        [
+            [
+                f"[{record.class_id}] {record.class_name}",
+                f"[{record.member_id}] {record.member_name}",
+                record.attended_at.strftime("%Y-%m-%d %H:%M:%S"),
+            ]
+            for record in records
+        ],
+    )
 
 
 def prompt_attendance_to_delete(class_id: int, member_id: int):
@@ -571,9 +606,9 @@ def prompt_attendance_to_delete(class_id: int, member_id: int):
         raise service.BusinessError("No attendance records for this class and member")
     if len(records) == 1:
         return records[0].attended_at
-    print(c("  Records for this class and member:", YELLOW))
-    for i, record in enumerate(records, start=1):
-        print(f"    {i}. {service.format_attendance(record)}")
+    print_section("Records for this class and member")
+    for index, record in enumerate(records, start=1):
+        print(f"    {index}. {service.format_attendance(record)}")
     index = prompt_int("Record number to delete", min_value=1, max_value=len(records))
     return records[index - 1].attended_at
 
@@ -589,9 +624,10 @@ def run_attendance_menu() -> None:
         ("0", "Back"),
     ]
     while True:
+        clear_screen()
         print_header("Attendance")
         print_menu(options)
-        option = input(c("\n  Option: ", CYAN)).strip()
+        option = prompt_option()
 
         try:
             if option == "1":
@@ -602,8 +638,7 @@ def run_attendance_menu() -> None:
                 pause()
 
             elif option == "2":
-                print()
-                print(c("  Attendance:", YELLOW))
+                print_section("Attendance")
                 show_attendance_records(service.list_attendance())
                 pause()
 
@@ -614,8 +649,7 @@ def run_attendance_menu() -> None:
                 if not records:
                     print_error("No attendance records for this class and member")
                 else:
-                    print()
-                    print(c("  Attendance records:", YELLOW))
+                    print_section("Attendance records")
                     show_attendance_records(records)
                 pause()
 
@@ -633,12 +667,8 @@ def run_attendance_menu() -> None:
                 if gym_class is None:
                     print_error("Class not found")
                 else:
-                    print()
-                    print(
-                        c(
-                            f"  Attendance for [{gym_class.id}] {gym_class.name}:",
-                            YELLOW,
-                        )
+                    print_section(
+                        f"Attendance for [{gym_class.id}] {gym_class.name}"
                     )
                     show_attendance_records(
                         service.list_attendance_by_class(class_id)
@@ -651,8 +681,7 @@ def run_attendance_menu() -> None:
                 if m is None:
                     print_error("Member not found")
                 else:
-                    print()
-                    print(c(f"  Attendance for [{m.id}] {m.name}:", YELLOW))
+                    print_section(f"Attendance for [{m.id}] {m.name}")
                     show_attendance_records(
                         service.list_attendance_by_member(member_id)
                     )
@@ -677,6 +706,8 @@ def run_attendance_menu() -> None:
 
 def main() -> None:
     init_schema()
+    clear_screen()
+    print_banner()
 
     main_options = [
         ("1", "Trainers"),
@@ -688,9 +719,10 @@ def main() -> None:
     ]
 
     while True:
+        clear_screen()
         print_header("Gym Management")
         print_menu(main_options)
-        option = input(c("\n  Option: ", CYAN)).strip()
+        option = prompt_option()
 
         if option == "1":
             run_trainer_menu()
