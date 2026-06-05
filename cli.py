@@ -706,8 +706,6 @@ def run_attendance_menu() -> None:
 
 def main() -> None:
     init_schema()
-    clear_screen()
-    print_banner()
 
     main_options = [
         ("1", "Trainers"),
@@ -720,6 +718,7 @@ def main() -> None:
 
     while True:
         clear_screen()
+        print_banner()
         print_header("Gym Management")
         print_menu(main_options)
         option = prompt_option()
