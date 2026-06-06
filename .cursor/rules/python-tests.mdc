@@ -1,0 +1,14 @@
+---
+description: Gym1 pytest conventions and database requirements
+globs: tests/**/*.py
+alwaysApply: false
+---
+
+# Gym1 tests
+
+- Tests run against **real PostgreSQL** at `GYM_DB_HOST` (default `192.168.1.34`). Use `gymdb_test`, not production.
+- Each test file defines an autouse `clean_db` fixture: `init_schema()` then `TRUNCATE ... RESTART IDENTITY`. Copy from `test_trainer_crud.py`.
+- Import via project root (`conftest.py` adds it to `sys.path`): `from db import ...`, `import service`.
+- Service tests: `tests/test_service.py`. CRUD tests: `tests/test_*_crud.py`.
+- Assert `service.BusinessError` with `pytest.raises` and Spanish error messages where applicable.
+- Run: `make test` or `.venv/bin/python -m pytest tests/<file>.py -v`
