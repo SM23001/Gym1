@@ -17,7 +17,8 @@ A **command-line (CLI)** gym management system in Python with **PostgreSQL** per
 7. [Software architecture model](#software-architecture-model)
 8. [Module structure (technical design)](#module-structure-technical-design)
 9. [Tests](#tests)
-10. [Team roles 3 collaborators](#Team-roles-3-collaborators)  
+10. [Agent development](#agent-development)
+11. [Team roles 3 collaborators](#Team-roles-3-collaborators)  
 ---
 
 ## Prerequisites
@@ -301,6 +302,31 @@ pytest tests/test_attendance_crud.py -q
 
 
 **Important:** tests run `TRUNCATE` on every case. Do not use a database you need to keep; for a dedicated test DB you can set e.g. `GYM_DB_NAME=gymdb_test` in `.env`.
+
+---
+
+## Agent development
+
+This project includes scaffolding for [Cursor](https://cursor.com) and other AI coding agents.
+
+**Start here:** [`AGENTS.md`](AGENTS.md) — setup, architecture layers, feature workflow, and constraints.
+
+**Environment template:** copy [`.env.example`](.env.example) to `.env` and adjust `GYM_DB_*` if needed. The example uses `gymdb_test` on PostgreSQL at `192.168.1.34`.
+
+**Makefile shortcuts** (from the project root):
+
+| Command | Action |
+|---------|--------|
+| `make setup` | Create `.venv` and install dependencies |
+| `make test` | Run the full pytest suite |
+| `make run` | Start the CLI (`python cli.py`) |
+| `make check-db` | Verify PostgreSQL connectivity |
+
+**Cursor rules** in [`.cursor/rules/`](.cursor/rules/) give the agent persistent context about architecture and test conventions.
+
+Example prompt when working with an agent:
+
+> Add [feature]. Follow AGENTS.md layer boundaries. Run `make test` when done.
 
 ---
 ## Team roles 3 collaborators
