@@ -2,6 +2,7 @@ from datetime import time
 
 import pytest
 
+from conftest import create_test_trainer
 from db import init_schema, get_connection
 import service
 
@@ -77,7 +78,7 @@ def test_delete_member_not_found():
 
 
 def test_list_member_classes():
-    trainer = service.create_trainer("Ana")
+    trainer = create_test_trainer("Ana")
     m1 = service.create_member("Juan")
     m2 = service.create_member("María")
     c1 = service.create_class(
@@ -105,7 +106,7 @@ def test_list_member_classes():
 
 
 def test_delete_member_cascades_enrollments():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     member = service.create_member("M")
     gym_class = service.create_class(
         "Clase",

@@ -2,6 +2,7 @@ from datetime import time
 
 import pytest
 
+from conftest import create_test_trainer
 from db import init_schema, get_connection
 import service
 
@@ -18,18 +19,60 @@ def clean_db():
 
 
 def test_create_trainer():
-    t = service.create_trainer("Ana")
+    t = service.create_trainer(
+        "Ana",
+        "ana@gym.com",
+        "71234567",
+        "Yoga",
+        bio="Instructora certificada",
+        years_experience=5,
+    )
     assert t.id == 1
     assert t.name == "Ana"
+    assert t.email == "ana@gym.com"
+    assert t.phone == "71234567"
+    assert t.specialty == "Yoga"
+    assert t.bio == "Instructora certificada"
+    assert t.years_experience == 5
 
 
 def test_create_trainer_empty_name():
     with pytest.raises(service.BusinessError, match="nombre no puede estar vacío"):
-        service.create_trainer("   ")
+        service.create_trainer("   ", "a@gym.com", "71234567", "Yoga")
+
+
+def test_create_trainer_invalid_email():
+    with pytest.raises(service.BusinessError, match="email no es válido"):
+        service.create_trainer("Ana", "not-an-email", "71234567", "Yoga")
+
+
+def test_create_trainer_invalid_phone():
+    with pytest.raises(service.BusinessError, match="teléfono no es válido"):
+        service.create_trainer("Ana", "ana@gym.com", "123", "Yoga")
+
+
+def test_create_trainer_empty_specialty():
+    with pytest.raises(service.BusinessError, match="especialidad no puede estar vacía"):
+        service.create_trainer("Ana", "ana@gym.com", "71234567", "   ")
+
+
+def test_create_trainer_duplicate_email():
+    service.create_trainer("A", "same@gym.com", "71234567", "Yoga")
+    with pytest.raises(service.BusinessError, match="email ya está registrado"):
+        service.create_trainer("B", "same@gym.com", "79876543", "CrossFit")
+
+
+def test_create_trainer_negative_experience():
+    with pytest.raises(
+        service.BusinessError, match="años de experiencia no pueden ser negativos"
+    ):
+        service.create_trainer(
+            "Ana", "ana@gym.com", "71234567", "Yoga", years_experience=-1
+        )
 
 
 def test_get_trainer():
-    created = service.create_trainer("Luis")
+    created = create_test_trainer("Luis", email="luis@gym.com")
     found = service.get_trainer(created.id)
     assert found == created
 
@@ -39,34 +82,51 @@ def test_get_trainer_not_found():
 
 
 def test_list_trainers():
-    service.create_trainer("A")
-    service.create_trainer("B")
+    create_test_trainer("A", email="a@gym.com")
+    create_test_trainer("B", email="b@gym.com")
     trainers = service.list_trainers()
     assert len(trainers) == 2
     assert [t.name for t in trainers] == ["A", "B"]
 
 
 def test_update_trainer():
-    t = service.create_trainer("Original")
-    updated = service.update_trainer(t.id, "Nuevo nombre")
+    t = create_test_trainer("Original", email="orig@gym.com")
+    updated = service.update_trainer(
+        t.id,
+        "Nuevo nombre",
+        "nuevo@gym.com",
+        "79998877",
+        "Pilates",
+        bio="Nueva bio",
+        years_experience=3,
+    )
     assert updated.id == t.id
     assert updated.name == "Nuevo nombre"
+    assert updated.email == "nuevo@gym.com"
+    assert updated.specialty == "Pilates"
     assert service.get_trainer(t.id).name == "Nuevo nombre"
 
 
 def test_update_trainer_not_found():
     with pytest.raises(service.BusinessError, match="no existe"):
-        service.update_trainer(999, "X")
+        service.update_trainer(999, "X", "x@gym.com", "71234567", "Yoga")
 
 
 def test_update_trainer_empty_name():
-    t = service.create_trainer("Ana")
+    t = create_test_trainer("Ana", email="ana@gym.com")
     with pytest.raises(service.BusinessError, match="nombre no puede estar vacío"):
-        service.update_trainer(t.id, "")
+        service.update_trainer(t.id, "", "ana@gym.com", "71234567", "Yoga")
+
+
+def test_update_trainer_duplicate_email():
+    t1 = create_test_trainer("A", email="a@gym.com")
+    create_test_trainer("B", email="b@gym.com")
+    with pytest.raises(service.BusinessError, match="email ya está registrado"):
+        service.update_trainer(t1.id, "A", "b@gym.com", "71234567", "Yoga")
 
 
 def test_delete_trainer():
-    t = service.create_trainer("Para borrar")
+    t = create_test_trainer("Para borrar", email="del@gym.com")
     service.delete_trainer(t.id)
     assert service.get_trainer(t.id) is None
 
@@ -77,8 +137,8 @@ def test_delete_trainer_not_found():
 
 
 def test_list_classes_by_trainer():
-    t1 = service.create_trainer("Ana")
-    t2 = service.create_trainer("Luis")
+    t1 = create_test_trainer("Ana", email="ana@gym.com")
+    t2 = create_test_trainer("Luis", email="luis@gym.com")
     c1 = service.create_class(
         "Spinning",
         t1.id,
@@ -100,11 +160,12 @@ def test_list_classes_by_trainer():
     assert classes[0].id == c1.id
     assert classes[0].name == "Spinning"
     assert service.list_classes_by_trainer(t2.id)[0].name == "Yoga"
-    assert service.list_classes_by_trainer(service.create_trainer("Solo").id) == []
+    solo = create_test_trainer("Solo", email="solo@gym.com")
+    assert service.list_classes_by_trainer(solo.id) == []
 
 
 def test_delete_trainer_with_classes():
-    trainer = service.create_trainer("Con clases")
+    trainer = create_test_trainer("Con clases", email="clases@gym.com")
     service.create_class(
         "Spinning",
         trainer.id,

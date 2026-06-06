@@ -2,6 +2,7 @@ from datetime import time
 
 import pytest
 
+from conftest import create_test_trainer
 from db import init_schema, get_connection
 import service
 
@@ -18,7 +19,7 @@ def clean_db():
 
 
 def _create_class(name="Spinning", capacity=10):
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     return service.create_class(
         name,
         trainer.id,
@@ -37,7 +38,7 @@ def test_create_class():
 
 
 def test_create_class_empty_name():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     with pytest.raises(service.BusinessError, match="nombre no puede estar vacío"):
         service.create_class(
             "  ",
@@ -62,7 +63,7 @@ def test_create_class_invalid_trainer():
 
 
 def test_create_class_invalid_time():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     with pytest.raises(service.BusinessError, match="hora de fin"):
         service.create_class(
             "Yoga",
@@ -107,7 +108,7 @@ def test_list_class_members():
 
 def test_update_class():
     gym_class = _create_class("Original")
-    trainer = service.create_trainer("Nuevo T")
+    trainer = create_test_trainer("Nuevo T")
     updated = service.update_class(
         gym_class.id,
         "Nuevo nombre",
@@ -124,7 +125,7 @@ def test_update_class():
 
 
 def test_update_class_not_found():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     with pytest.raises(service.BusinessError, match="no existe"):
         service.update_class(
             999,

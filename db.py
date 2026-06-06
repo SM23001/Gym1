@@ -24,7 +24,12 @@ def init_schema() -> None:
     ddl = """
     CREATE TABLE IF NOT EXISTS trainers (
         id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        phone TEXT NOT NULL,
+        specialty TEXT NOT NULL,
+        bio TEXT NOT NULL DEFAULT '',
+        years_experience INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS members (
@@ -56,7 +61,34 @@ def init_schema() -> None:
     );
     """
 
+    migrations = """
+    ALTER TABLE trainers ADD COLUMN IF NOT EXISTS email TEXT;
+    ALTER TABLE trainers ADD COLUMN IF NOT EXISTS phone TEXT;
+    ALTER TABLE trainers ADD COLUMN IF NOT EXISTS specialty TEXT;
+    ALTER TABLE trainers ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
+    ALTER TABLE trainers ADD COLUMN IF NOT EXISTS years_experience INTEGER;
+
+    UPDATE trainers
+    SET email = 'trainer' || id || '@gym.local'
+    WHERE email IS NULL OR email = '';
+
+    UPDATE trainers
+    SET phone = '0000000'
+    WHERE phone IS NULL OR phone = '';
+
+    UPDATE trainers
+    SET specialty = 'General'
+    WHERE specialty IS NULL OR specialty = '';
+
+    UPDATE trainers
+    SET bio = ''
+    WHERE bio IS NULL;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS trainers_email_unique ON trainers (email);
+    """
+
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(ddl)
+            cur.execute(migrations)
 

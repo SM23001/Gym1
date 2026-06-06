@@ -6,16 +6,45 @@ from psycopg2.extras import RealDictCursor
 from db import get_connection
 from models import Trainer, Member, GymClass, Enrollment, Attendance
 
+_TRAINER_COLUMNS = (
+    "id, name, email, phone, specialty, bio, years_experience"
+)
 
-def create_trainer(name: str) -> Trainer:
+
+def _trainer_from_row(row) -> Trainer:
+    return Trainer(
+        id=row["id"],
+        name=row["name"],
+        email=row["email"],
+        phone=row["phone"],
+        specialty=row["specialty"],
+        bio=row["bio"] or "",
+        years_experience=row["years_experience"],
+    )
+
+
+def create_trainer(
+    name: str,
+    email: str,
+    phone: str,
+    specialty: str,
+    *,
+    bio: str = "",
+    years_experience: int | None = None,
+) -> Trainer:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "INSERT INTO trainers (name) VALUES (%s) RETURNING id, name",
-                (name,),
+                f"""
+                INSERT INTO trainers
+                    (name, email, phone, specialty, bio, years_experience)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING {_TRAINER_COLUMNS}
+                """,
+                (name, email, phone, specialty, bio, years_experience),
             )
             row = cur.fetchone()
-    return Trainer(id=row["id"], name=row["name"])
+    return _trainer_from_row(row)
 
 
 def create_member(name: str) -> Member:
@@ -65,32 +94,76 @@ def create_class(
 def get_trainer(trainer_id: int) -> Optional[Trainer]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT id, name FROM trainers WHERE id=%s", (trainer_id,))
+            cur.execute(
+                f"SELECT {_TRAINER_COLUMNS} FROM trainers WHERE id=%s",
+                (trainer_id,),
+            )
             row = cur.fetchone()
-    return Trainer(**row) if row else None
+    return _trainer_from_row(row) if row else None
 
 
 def list_trainers() -> List[Trainer]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT id, name FROM trainers ORDER BY id")
+            cur.execute(
+                f"SELECT {_TRAINER_COLUMNS} FROM trainers ORDER BY id"
+            )
             rows = cur.fetchall()
-    return [Trainer(**r) for r in rows]
+    return [_trainer_from_row(r) for r in rows]
 
 
-def update_trainer(trainer_id: int, name: str) -> Optional[Trainer]:
+def trainer_email_taken(email: str, *, exclude_id: int | None = None) -> bool:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            if exclude_id is None:
+                cur.execute(
+                    "SELECT 1 FROM trainers WHERE email = %s LIMIT 1",
+                    (email,),
+                )
+            else:
+                cur.execute(
+                    "SELECT 1 FROM trainers WHERE email = %s AND id <> %s LIMIT 1",
+                    (email, exclude_id),
+                )
+            return cur.fetchone() is not None
+
+
+def update_trainer(
+    trainer_id: int,
+    name: str,
+    email: str,
+    phone: str,
+    specialty: str,
+    *,
+    bio: str = "",
+    years_experience: int | None = None,
+) -> Optional[Trainer]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                """
-                UPDATE trainers SET name = %s
+                f"""
+                UPDATE trainers
+                SET name = %s,
+                    email = %s,
+                    phone = %s,
+                    specialty = %s,
+                    bio = %s,
+                    years_experience = %s
                 WHERE id = %s
-                RETURNING id, name
+                RETURNING {_TRAINER_COLUMNS}
                 """,
-                (name, trainer_id),
+                (
+                    name,
+                    email,
+                    phone,
+                    specialty,
+                    bio,
+                    years_experience,
+                    trainer_id,
+                ),
             )
             row = cur.fetchone()
-    return Trainer(**row) if row else None
+    return _trainer_from_row(row) if row else None
 
 
 def delete_trainer(trainer_id: int) -> bool:
