@@ -2,6 +2,7 @@ from datetime import time
 
 import pytest
 
+from conftest import create_test_trainer
 from db import init_schema, get_connection
 import service
 
@@ -18,7 +19,7 @@ def clean_db():
 
 
 def _setup_attendance():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     member = service.create_member("M")
     gym_class = service.create_class(
         "Spinning",
@@ -54,7 +55,7 @@ def test_has_attendance_true():
 
 
 def test_has_attendance_false():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     member = service.create_member("M")
     gym_class = service.create_class(
         "Yoga",
@@ -74,7 +75,7 @@ def test_has_attendance_invalid_class():
 
 
 def test_has_attendance_invalid_member():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     gym_class = service.create_class(
         "Clase",
         trainer.id,
@@ -116,7 +117,7 @@ def test_delete_attendance():
 
 
 def test_delete_attendance_not_found():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     member = service.create_member("M")
     gym_class = service.create_class(
         "Clase",
@@ -141,7 +142,7 @@ def test_mark_attendance_invalid_class():
 
 
 def test_mark_attendance_invalid_member():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     gym_class = service.create_class(
         "Clase",
         trainer.id,

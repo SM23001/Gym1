@@ -6,6 +6,11 @@ from datetime import datetime, time
 class Trainer:
     id: int
     name: str
+    email: str
+    phone: str
+    specialty: str
+    bio: str = ""
+    years_experience: int | None = None
 
 
 @dataclass

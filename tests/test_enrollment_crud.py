@@ -2,6 +2,7 @@ from datetime import time
 
 import pytest
 
+from conftest import create_test_trainer
 from db import init_schema, get_connection
 import service
 
@@ -18,7 +19,7 @@ def clean_db():
 
 
 def _setup_enrollment():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     member = service.create_member("M")
     gym_class = service.create_class(
         "Spinning",
@@ -52,7 +53,7 @@ def test_is_enrolled_true():
 
 
 def test_is_enrolled_false():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     member = service.create_member("M")
     gym_class = service.create_class(
         "Yoga",
@@ -72,7 +73,7 @@ def test_is_enrolled_invalid_class():
 
 
 def test_is_enrolled_invalid_member():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     gym_class = service.create_class(
         "Clase",
         trainer.id,
@@ -93,7 +94,7 @@ def test_unenroll_member():
 
 
 def test_unenroll_not_enrolled():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     member = service.create_member("M")
     gym_class = service.create_class(
         "Clase",
@@ -114,7 +115,7 @@ def test_unenroll_invalid_class():
 
 
 def test_unenroll_invalid_member():
-    trainer = service.create_trainer("T")
+    trainer = create_test_trainer("T")
     gym_class = service.create_class(
         "Clase",
         trainer.id,

@@ -111,9 +111,27 @@ def show_trainers() -> None:
         print_empty("(no trainers registered)")
         return
     print_table(
-        ["ID", "Name"],
-        [[str(trainer.id), trainer.name] for trainer in trainers],
+        ["ID", "Name", "Specialty", "Email"],
+        [
+            [str(trainer.id), trainer.name, trainer.specialty, trainer.email]
+            for trainer in trainers
+        ],
     )
+
+
+def show_trainer_profile(trainer) -> None:
+    years = (
+        str(trainer.years_experience)
+        if trainer.years_experience is not None
+        else "(not set)"
+    )
+    bio = trainer.bio if trainer.bio else "(not set)"
+    print_success(f"[{trainer.id}] {trainer.name}")
+    print(f"  Email:       {trainer.email}")
+    print(f"  Phone:       {trainer.phone}")
+    print(f"  Specialty:   {trainer.specialty}")
+    print(f"  Experience:  {years} years")
+    print(f"  Bio:         {bio}")
 
 
 def show_members() -> None:
@@ -217,6 +235,43 @@ def prompt_class_fields(*, existing=None):
     return name, trainer_id, day, start, end, capacity
 
 
+def prompt_optional_years_experience(
+    label: str, current: int | None = None
+) -> int | None:
+    if current is None:
+        hint = c(" [Enter = skip]", CYAN)
+    else:
+        hint = c(f" [Enter = {current}]", CYAN)
+    raw = input(c(f"  {label}{hint}: ", CYAN)).strip()
+    if not raw:
+        return current
+    try:
+        return int(raw)
+    except ValueError:
+        raise ValueError(f"{label}: expected an integer or empty")
+
+
+def prompt_trainer_fields(*, existing=None):
+    if existing is None:
+        name = prompt_text("Trainer name")
+        email = prompt_text("Email")
+        phone = prompt_text("Phone")
+        specialty = prompt_text("Specialty")
+        bio = prompt_text("Bio", required=False)
+        years_experience = prompt_optional_years_experience("Years of experience")
+        return name, email, phone, specialty, bio, years_experience
+
+    name = prompt_optional_text("Trainer name", existing.name)
+    email = prompt_optional_text("Email", existing.email)
+    phone = prompt_optional_text("Phone", existing.phone)
+    specialty = prompt_optional_text("Specialty", existing.specialty)
+    bio = prompt_optional_text("Bio", existing.bio)
+    years_experience = prompt_optional_years_experience(
+        "Years of experience", existing.years_experience
+    )
+    return name, email, phone, specialty, bio, years_experience
+
+
 def prompt_trainer_id(action: str) -> int:
     print_section(action)
     show_trainers()
@@ -253,8 +308,22 @@ def run_trainer_menu() -> None:
 
         try:
             if option == "1":
-                name = prompt_text("Trainer name")
-                t = service.create_trainer(name)
+                (
+                    name,
+                    email,
+                    phone,
+                    specialty,
+                    bio,
+                    years_experience,
+                ) = prompt_trainer_fields()
+                t = service.create_trainer(
+                    name,
+                    email,
+                    phone,
+                    specialty,
+                    bio=bio,
+                    years_experience=years_experience,
+                )
                 print_success(f"Trainer created with id {t.id}")
                 pause()
 
@@ -269,14 +338,34 @@ def run_trainer_menu() -> None:
                 if t is None:
                     print_error("Trainer not found")
                 else:
-                    print_success(f"[{t.id}] {t.name}")
+                    print_section("Trainer profile")
+                    show_trainer_profile(t)
                 pause()
 
             elif option == "4":
                 trainer_id = prompt_trainer_id("Trainer to update")
-                name = prompt_text("New name")
-                t = service.update_trainer(trainer_id, name)
-                print_success(f"Trainer updated: [{t.id}] {t.name}")
+                existing = service.get_trainer(trainer_id)
+                if existing is None:
+                    print_error("Trainer not found")
+                else:
+                    (
+                        name,
+                        email,
+                        phone,
+                        specialty,
+                        bio,
+                        years_experience,
+                    ) = prompt_trainer_fields(existing=existing)
+                    t = service.update_trainer(
+                        trainer_id,
+                        name,
+                        email,
+                        phone,
+                        specialty,
+                        bio=bio,
+                        years_experience=years_experience,
+                    )
+                    print_success(f"Trainer updated: [{t.id}] {t.name}")
                 pause()
 
             elif option == "5":

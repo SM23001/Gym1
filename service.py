@@ -8,22 +8,108 @@ class BusinessError(Exception):
     pass
 
 
-def create_trainer(name: str):
+def _validate_email(email: str) -> str:
+    email = email.strip().lower()
+    if not email or "@" not in email or "." not in email.split("@")[-1]:
+        raise BusinessError("El email no es válido")
+    return email
+
+
+def _validate_phone(phone: str) -> str:
+    phone = phone.strip()
+    digits = sum(ch.isdigit() for ch in phone)
+    if digits < 7:
+        raise BusinessError("El teléfono no es válido")
+    return phone
+
+
+def _validate_specialty(specialty: str) -> str:
+    specialty = specialty.strip()
+    if not specialty:
+        raise BusinessError("La especialidad no puede estar vacía")
+    return specialty
+
+
+def _validate_years_experience(years_experience: int | None) -> int | None:
+    if years_experience is not None and years_experience < 0:
+        raise BusinessError("Los años de experiencia no pueden ser negativos")
+    return years_experience
+
+
+def _normalize_trainer_fields(
+    name: str,
+    email: str,
+    phone: str,
+    specialty: str,
+    *,
+    bio: str = "",
+    years_experience: int | None = None,
+) -> tuple[str, str, str, str, str, int | None]:
     name = name.strip()
     if not name:
         raise BusinessError("El nombre no puede estar vacío")
-    return repo.create_trainer(name)
+    email = _validate_email(email)
+    phone = _validate_phone(phone)
+    specialty = _validate_specialty(specialty)
+    bio = bio.strip()
+    years_experience = _validate_years_experience(years_experience)
+    return name, email, phone, specialty, bio, years_experience
+
+
+def create_trainer(
+    name: str,
+    email: str,
+    phone: str,
+    specialty: str,
+    *,
+    bio: str = "",
+    years_experience: int | None = None,
+):
+    name, email, phone, specialty, bio, years_experience = _normalize_trainer_fields(
+        name, email, phone, specialty, bio=bio, years_experience=years_experience
+    )
+    if repo.trainer_email_taken(email):
+        raise BusinessError("El email ya está registrado")
+    return repo.create_trainer(
+        name,
+        email,
+        phone,
+        specialty,
+        bio=bio,
+        years_experience=years_experience,
+    )
 
 
 def get_trainer(trainer_id: int):
     return repo.get_trainer(trainer_id)
 
 
-def update_trainer(trainer_id: int, name: str):
-    name = name.strip()
-    if not name:
-        raise BusinessError("El nombre no puede estar vacío")
-    trainer = repo.update_trainer(trainer_id, name)
+def update_trainer(
+    trainer_id: int,
+    name: str,
+    email: str,
+    phone: str,
+    specialty: str,
+    *,
+    bio: str = "",
+    years_experience: int | None = None,
+):
+    name, email, phone, specialty, bio, years_experience = _normalize_trainer_fields(
+        name, email, phone, specialty, bio=bio, years_experience=years_experience
+    )
+    if repo.get_trainer(trainer_id) is None:
+        raise BusinessError("Entrenador no existe")
+    if repo.trainer_email_taken(email, exclude_id=trainer_id):
+        raise BusinessError("El email ya está registrado")
+    trainer = repo.update_trainer(
+        trainer_id,
+        name,
+        email,
+        phone,
+        specialty,
+        bio=bio,
+        years_experience=years_experience,
+    )
     if trainer is None:
         raise BusinessError("Entrenador no existe")
     return trainer
