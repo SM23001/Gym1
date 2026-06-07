@@ -34,7 +34,11 @@ def init_schema() -> None:
 
     CREATE TABLE IF NOT EXISTS members (
         id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        phone TEXT NOT NULL,
+        membership_plan TEXT NOT NULL,
+        notes TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS classes (
@@ -85,6 +89,29 @@ def init_schema() -> None:
     WHERE bio IS NULL;
 
     CREATE UNIQUE INDEX IF NOT EXISTS trainers_email_unique ON trainers (email);
+
+    ALTER TABLE members ADD COLUMN IF NOT EXISTS email TEXT;
+    ALTER TABLE members ADD COLUMN IF NOT EXISTS phone TEXT;
+    ALTER TABLE members ADD COLUMN IF NOT EXISTS membership_plan TEXT;
+    ALTER TABLE members ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT '';
+
+    UPDATE members
+    SET email = 'member' || id || '@gym.local'
+    WHERE email IS NULL OR email = '';
+
+    UPDATE members
+    SET phone = '0000000'
+    WHERE phone IS NULL OR phone = '';
+
+    UPDATE members
+    SET membership_plan = 'Standard'
+    WHERE membership_plan IS NULL OR membership_plan = '';
+
+    UPDATE members
+    SET notes = ''
+    WHERE notes IS NULL;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS members_email_unique ON members (email);
     """
 
     with get_connection() as conn:

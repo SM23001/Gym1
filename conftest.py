@@ -10,6 +10,7 @@ if str(root) not in sys.path:
     sys.path.insert(0, str(root))
 
 _trainer_counter = itertools.count(1)
+_member_counter = itertools.count(1)
 
 
 def create_test_trainer(
@@ -31,4 +32,24 @@ def create_test_trainer(
         specialty,
         bio=bio,
         years_experience=years_experience,
+    )
+
+
+def create_test_member(
+    name="M",
+    *,
+    email=None,
+    phone="5550001",
+    membership_plan="Standard",
+    notes="",
+):
+    n = next(_member_counter)
+    if email is None:
+        email = f"member{n}@gym.test"
+    return service.create_member(
+        name,
+        email,
+        phone,
+        membership_plan,
+        notes=notes,
     )

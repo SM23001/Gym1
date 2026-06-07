@@ -125,22 +125,81 @@ def delete_trainer(trainer_id: int) -> None:
     repo.delete_trainer(trainer_id)
 
 
-def create_member(name: str):
+def _validate_membership_plan(membership_plan: str) -> str:
+    membership_plan = membership_plan.strip()
+    if not membership_plan:
+        raise BusinessError("El plan de membresía no puede estar vacío")
+    return membership_plan
+
+
+def _normalize_member_fields(
+    name: str,
+    email: str,
+    phone: str,
+    membership_plan: str,
+    *,
+    notes: str = "",
+) -> tuple[str, str, str, str, str]:
     name = name.strip()
     if not name:
         raise BusinessError("El nombre no puede estar vacío")
-    return repo.create_member(name)
+    email = _validate_email(email)
+    phone = _validate_phone(phone)
+    membership_plan = _validate_membership_plan(membership_plan)
+    notes = notes.strip()
+    return name, email, phone, membership_plan, notes
+
+
+def create_member(
+    name: str,
+    email: str,
+    phone: str,
+    membership_plan: str,
+    *,
+    notes: str = "",
+):
+    name, email, phone, membership_plan, notes = _normalize_member_fields(
+        name, email, phone, membership_plan, notes=notes
+    )
+    if repo.member_email_taken(email):
+        raise BusinessError("El email ya está registrado")
+    return repo.create_member(
+        name,
+        email,
+        phone,
+        membership_plan,
+        notes=notes,
+    )
 
 
 def get_member(member_id: int):
     return repo.get_member(member_id)
 
 
-def update_member(member_id: int, name: str):
-    name = name.strip()
-    if not name:
-        raise BusinessError("El nombre no puede estar vacío")
-    member = repo.update_member(member_id, name)
+def update_member(
+    member_id: int,
+    name: str,
+    email: str,
+    phone: str,
+    membership_plan: str,
+    *,
+    notes: str = "",
+):
+    name, email, phone, membership_plan, notes = _normalize_member_fields(
+        name, email, phone, membership_plan, notes=notes
+    )
+    if repo.get_member(member_id) is None:
+        raise BusinessError("Miembro no existe")
+    if repo.member_email_taken(email, exclude_id=member_id):
+        raise BusinessError("El email ya está registrado")
+    member = repo.update_member(
+        member_id,
+        name,
+        email,
+        phone,
+        membership_plan,
+        notes=notes,
+    )
     if member is None:
         raise BusinessError("Miembro no existe")
     return member

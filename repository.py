@@ -10,6 +10,10 @@ _TRAINER_COLUMNS = (
     "id, name, email, phone, specialty, bio, years_experience"
 )
 
+_MEMBER_COLUMNS = (
+    "id, name, email, phone, membership_plan, notes"
+)
+
 
 def _trainer_from_row(row) -> Trainer:
     return Trainer(
@@ -47,15 +51,38 @@ def create_trainer(
     return _trainer_from_row(row)
 
 
-def create_member(name: str) -> Member:
+def _member_from_row(row) -> Member:
+    return Member(
+        id=row["id"],
+        name=row["name"],
+        email=row["email"],
+        phone=row["phone"],
+        membership_plan=row["membership_plan"],
+        notes=row["notes"] or "",
+    )
+
+
+def create_member(
+    name: str,
+    email: str,
+    phone: str,
+    membership_plan: str,
+    *,
+    notes: str = "",
+) -> Member:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "INSERT INTO members (name) VALUES (%s) RETURNING id, name",
-                (name,),
+                f"""
+                INSERT INTO members
+                    (name, email, phone, membership_plan, notes)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING {_MEMBER_COLUMNS}
+                """,
+                (name, email, phone, membership_plan, notes),
             )
             row = cur.fetchone()
-    return Member(id=row["id"], name=row["name"])
+    return _member_from_row(row)
 
 
 def create_class(
@@ -203,32 +230,66 @@ def list_classes_by_trainer(trainer_id: int) -> List[GymClass]:
 def get_member(member_id: int) -> Optional[Member]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT id, name FROM members WHERE id=%s", (member_id,))
+            cur.execute(
+                f"SELECT {_MEMBER_COLUMNS} FROM members WHERE id=%s",
+                (member_id,),
+            )
             row = cur.fetchone()
-    return Member(**row) if row else None
+    return _member_from_row(row) if row else None
 
 
 def list_members() -> List[Member]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT id, name FROM members ORDER BY id")
+            cur.execute(
+                f"SELECT {_MEMBER_COLUMNS} FROM members ORDER BY id"
+            )
             rows = cur.fetchall()
-    return [Member(**r) for r in rows]
+    return [_member_from_row(r) for r in rows]
 
 
-def update_member(member_id: int, name: str) -> Optional[Member]:
+def member_email_taken(email: str, *, exclude_id: int | None = None) -> bool:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            if exclude_id is None:
+                cur.execute(
+                    "SELECT 1 FROM members WHERE email = %s LIMIT 1",
+                    (email,),
+                )
+            else:
+                cur.execute(
+                    "SELECT 1 FROM members WHERE email = %s AND id <> %s LIMIT 1",
+                    (email, exclude_id),
+                )
+            return cur.fetchone() is not None
+
+
+def update_member(
+    member_id: int,
+    name: str,
+    email: str,
+    phone: str,
+    membership_plan: str,
+    *,
+    notes: str = "",
+) -> Optional[Member]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                """
-                UPDATE members SET name = %s
+                f"""
+                UPDATE members
+                SET name = %s,
+                    email = %s,
+                    phone = %s,
+                    membership_plan = %s,
+                    notes = %s
                 WHERE id = %s
-                RETURNING id, name
+                RETURNING {_MEMBER_COLUMNS}
                 """,
-                (name, member_id),
+                (name, email, phone, membership_plan, notes, member_id),
             )
             row = cur.fetchone()
-    return Member(**row) if row else None
+    return _member_from_row(row) if row else None
 
 
 def delete_member(member_id: int) -> bool:
@@ -406,7 +467,7 @@ def list_class_members(class_id: int) -> List[Member]:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT m.id, m.name
+                SELECT m.id, m.name, m.email, m.phone, m.membership_plan, m.notes
                 FROM members m
                 JOIN enrollments e ON e.member_id = m.id
                 WHERE e.class_id = %s
@@ -415,7 +476,7 @@ def list_class_members(class_id: int) -> List[Member]:
                 (class_id,),
             )
             rows = cur.fetchall()
-    return [Member(**r) for r in rows]
+    return [_member_from_row(r) for r in rows]
 
 
 def _attendance_select() -> str:

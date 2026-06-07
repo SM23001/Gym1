@@ -17,6 +17,10 @@ class Trainer:
 class Member:
     id: int
     name: str
+    email: str
+    phone: str
+    membership_plan: str
+    notes: str = ""
 
 
 @dataclass
