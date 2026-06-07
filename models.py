@@ -32,6 +32,7 @@ class GymClass:
     start_time: time
     end_time: time
     capacity: int
+    trainer_name: str = ""
 
 
 @dataclass

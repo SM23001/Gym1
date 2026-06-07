@@ -431,8 +431,9 @@ def list_class_members(class_id: int):
 
 
 def format_class(gym_class: GymClass) -> str:
+    trainer_label = gym_class.trainer_name or str(gym_class.trainer_id)
     return (
-        f"[{gym_class.id}] {gym_class.name} - Entrenador {gym_class.trainer_id} - "
+        f"[{gym_class.id}] {gym_class.name} - Entrenador {trainer_label} - "
         f"Día: {gym_class.day_of_week} {gym_class.start_time}-{gym_class.end_time} "
         f"Cupo: {gym_class.capacity}"
     )
