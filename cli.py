@@ -173,7 +173,7 @@ def show_classes() -> None:
             [
                 str(gym_class.id),
                 gym_class.name,
-                str(gym_class.trainer_id),
+                gym_class.trainer_name,
                 (
                     f"{DAY_NAMES[gym_class.day_of_week]} "
                     f"{gym_class.start_time.strftime('%H:%M')}-"
@@ -196,7 +196,7 @@ def show_class_rows(classes, *, empty_message: str = "(no classes)") -> None:
             [
                 str(gym_class.id),
                 gym_class.name,
-                str(gym_class.trainer_id),
+                gym_class.trainer_name,
                 (
                     f"{DAY_NAMES[gym_class.day_of_week]} "
                     f"{gym_class.start_time.strftime('%H:%M')}-"

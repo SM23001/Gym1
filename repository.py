@@ -14,6 +14,29 @@ _MEMBER_COLUMNS = (
     "id, name, email, phone, membership_plan, notes"
 )
 
+_CLASS_SELECT = """
+    c.id, c.name, c.trainer_id, c.day_of_week, c.start_time, c.end_time, c.capacity,
+    t.name AS trainer_name
+"""
+
+_CLASS_RETURNING = """
+    id, name, trainer_id, day_of_week, start_time, end_time, capacity,
+    (SELECT name FROM trainers WHERE id = trainer_id) AS trainer_name
+"""
+
+
+def _class_from_row(row) -> GymClass:
+    return GymClass(
+        id=row["id"],
+        name=row["name"],
+        trainer_id=row["trainer_id"],
+        day_of_week=row["day_of_week"],
+        start_time=row["start_time"],
+        end_time=row["end_time"],
+        capacity=row["capacity"],
+        trainer_name=row.get("trainer_name") or "",
+    )
+
 
 def _trainer_from_row(row) -> Trainer:
     return Trainer(
@@ -96,26 +119,18 @@ def create_class(
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                """
+                f"""
                 INSERT INTO classes
                     (name, trainer_id, day_of_week, start_time, end_time, capacity)
                 VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id, name, trainer_id, day_of_week, start_time, end_time, capacity
+                RETURNING {_CLASS_RETURNING}
                 """,
                 (name, trainer_id, day_of_week, start_time, end_time, capacity),
             )
             row = cur.fetchone()
             if not row:
                 raise RuntimeError("INSERT INTO classes no devolvió fila")
-    return GymClass(
-        id=row["id"],
-        name=row["name"],
-        trainer_id=row["trainer_id"],
-        day_of_week=row["day_of_week"],
-        start_time=row["start_time"],
-        end_time=row["end_time"],
-        capacity=row["capacity"],
-    )
+    return _class_from_row(row)
 
 
 def get_trainer(trainer_id: int) -> Optional[Trainer]:
@@ -215,16 +230,17 @@ def list_classes_by_trainer(trainer_id: int) -> List[GymClass]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                """
-                SELECT id, name, trainer_id, day_of_week, start_time, end_time, capacity
-                FROM classes
-                WHERE trainer_id = %s
-                ORDER BY day_of_week, start_time
+                f"""
+                SELECT {_CLASS_SELECT}
+                FROM classes c
+                JOIN trainers t ON t.id = c.trainer_id
+                WHERE c.trainer_id = %s
+                ORDER BY c.day_of_week, c.start_time
                 """,
                 (trainer_id,),
             )
             rows = cur.fetchall()
-    return [GymClass(**r) for r in rows]
+    return [_class_from_row(r) for r in rows]
 
 
 def get_member(member_id: int) -> Optional[Member]:
@@ -303,29 +319,31 @@ def get_class(class_id: int) -> Optional[GymClass]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                """
-                SELECT id, name, trainer_id, day_of_week, start_time, end_time, capacity
-                FROM classes
-                WHERE id=%s
+                f"""
+                SELECT {_CLASS_SELECT}
+                FROM classes c
+                JOIN trainers t ON t.id = c.trainer_id
+                WHERE c.id = %s
                 """,
                 (class_id,),
             )
             row = cur.fetchone()
-    return GymClass(**row) if row else None
+    return _class_from_row(row) if row else None
 
 
 def list_classes() -> List[GymClass]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                """
-                SELECT id, name, trainer_id, day_of_week, start_time, end_time, capacity
-                FROM classes
-                ORDER BY day_of_week, start_time
+                f"""
+                SELECT {_CLASS_SELECT}
+                FROM classes c
+                JOIN trainers t ON t.id = c.trainer_id
+                ORDER BY c.day_of_week, c.start_time
                 """
             )
             rows = cur.fetchall()
-    return [GymClass(**r) for r in rows]
+    return [_class_from_row(r) for r in rows]
 
 
 def update_class(
@@ -340,7 +358,7 @@ def update_class(
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                """
+                f"""
                 UPDATE classes
                 SET name = %s,
                     trainer_id = %s,
@@ -349,7 +367,7 @@ def update_class(
                     end_time = %s,
                     capacity = %s
                 WHERE id = %s
-                RETURNING id, name, trainer_id, day_of_week, start_time, end_time, capacity
+                RETURNING {_CLASS_RETURNING}
                 """,
                 (
                     name,
@@ -362,7 +380,7 @@ def update_class(
                 ),
             )
             row = cur.fetchone()
-    return GymClass(**row) if row else None
+    return _class_from_row(row) if row else None
 
 
 def delete_class(class_id: int) -> bool:
@@ -444,22 +462,18 @@ def list_member_classes(member_id: int) -> List[GymClass]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                """
-                SELECT c.id,
-                       c.name,
-                       c.trainer_id,
-                       c.day_of_week,
-                       c.start_time,
-                       c.end_time,
-                       c.capacity
+                f"""
+                SELECT {_CLASS_SELECT}
                 FROM classes c
+                JOIN trainers t ON t.id = c.trainer_id
                 JOIN enrollments e ON e.class_id = c.id
                 WHERE e.member_id = %s
+                ORDER BY c.day_of_week, c.start_time
                 """,
                 (member_id,),
             )
             rows = cur.fetchall()
-    return [GymClass(**r) for r in rows]
+    return [_class_from_row(r) for r in rows]
 
 
 def list_class_members(class_id: int) -> List[Member]:

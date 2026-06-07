@@ -86,11 +86,27 @@ def test_get_class_not_found():
 
 
 def test_list_classes():
-    _create_class("A")
-    _create_class("B")
+    trainer = create_test_trainer("Ana")
+    service.create_class(
+        "A",
+        trainer.id,
+        day_of_week=0,
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+        capacity=10,
+    )
+    service.create_class(
+        "B",
+        trainer.id,
+        day_of_week=1,
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+        capacity=10,
+    )
     classes = service.list_classes()
     assert len(classes) == 2
     assert [c.name for c in classes] == ["A", "B"]
+    assert all(c.trainer_name == "Ana" for c in classes)
 
 
 def test_list_class_members():
