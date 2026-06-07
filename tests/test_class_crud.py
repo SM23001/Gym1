@@ -2,7 +2,7 @@ from datetime import time
 
 import pytest
 
-from conftest import create_test_trainer
+from conftest import create_test_member, create_test_trainer
 from db import init_schema, get_connection
 import service
 
@@ -95,8 +95,8 @@ def test_list_classes():
 
 def test_list_class_members():
     gym_class = _create_class("Spinning")
-    m1 = service.create_member("Juan")
-    service.create_member("María")
+    m1 = create_test_member("Juan", email="juan@gym.com")
+    create_test_member("María", email="maria@gym.com")
     service.enroll_member(gym_class.id, m1.id)
     members = service.list_class_members(gym_class.id)
     assert len(members) == 1
@@ -140,8 +140,8 @@ def test_update_class_not_found():
 
 def test_update_class_capacity_below_enrollments():
     gym_class = _create_class(capacity=5)
-    service.enroll_member(gym_class.id, service.create_member("M1").id)
-    service.enroll_member(gym_class.id, service.create_member("M2").id)
+    service.enroll_member(gym_class.id, create_test_member("M1", email="m1@gym.com").id)
+    service.enroll_member(gym_class.id, create_test_member("M2", email="m2@gym.com").id)
     trainer = service.get_trainer(gym_class.trainer_id)
     with pytest.raises(service.BusinessError, match="inscripciones actuales"):
         service.update_class(
@@ -168,7 +168,7 @@ def test_delete_class_not_found():
 
 def test_delete_class_cascades_enrollments():
     gym_class = _create_class()
-    member = service.create_member("M")
+    member = create_test_member("M", email="m@gym.com")
     service.enroll_member(gym_class.id, member.id)
     service.delete_class(gym_class.id)
 

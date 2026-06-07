@@ -140,9 +140,26 @@ def show_members() -> None:
         print_empty("(no members registered)")
         return
     print_table(
-        ["ID", "Name"],
-        [[str(member.id), member.name] for member in members],
+        ["ID", "Name", "Plan", "Email"],
+        [
+            [
+                str(member.id),
+                member.name,
+                member.membership_plan,
+                member.email,
+            ]
+            for member in members
+        ],
     )
+
+
+def show_member_profile(member) -> None:
+    notes = member.notes if member.notes else "(not set)"
+    print_success(f"[{member.id}] {member.name}")
+    print(f"  Email:     {member.email}")
+    print(f"  Phone:     {member.phone}")
+    print(f"  Plan:      {member.membership_plan}")
+    print(f"  Notes:     {notes}")
 
 
 def show_classes() -> None:
@@ -197,8 +214,16 @@ def show_member_rows(members, *, empty_message: str = "(no members)") -> None:
         print_empty(empty_message)
         return
     print_table(
-        ["ID", "Name"],
-        [[str(member.id), member.name] for member in members],
+        ["ID", "Name", "Plan", "Email"],
+        [
+            [
+                str(member.id),
+                member.name,
+                member.membership_plan,
+                member.email,
+            ]
+            for member in members
+        ],
     )
 
 
@@ -270,6 +295,25 @@ def prompt_trainer_fields(*, existing=None):
         "Years of experience", existing.years_experience
     )
     return name, email, phone, specialty, bio, years_experience
+
+
+def prompt_member_fields(*, existing=None):
+    if existing is None:
+        name = prompt_text("Member name")
+        email = prompt_text("Email")
+        phone = prompt_text("Phone")
+        membership_plan = prompt_text("Membership plan")
+        notes = prompt_text("Notes", required=False)
+        return name, email, phone, membership_plan, notes
+
+    name = prompt_optional_text("Member name", existing.name)
+    email = prompt_optional_text("Email", existing.email)
+    phone = prompt_optional_text("Phone", existing.phone)
+    membership_plan = prompt_optional_text(
+        "Membership plan", existing.membership_plan
+    )
+    notes = prompt_optional_text("Notes", existing.notes)
+    return name, email, phone, membership_plan, notes
 
 
 def prompt_trainer_id(action: str) -> int:
@@ -422,8 +466,20 @@ def run_member_menu() -> None:
 
         try:
             if option == "1":
-                name = prompt_text("Member name")
-                m = service.create_member(name)
+                (
+                    name,
+                    email,
+                    phone,
+                    membership_plan,
+                    notes,
+                ) = prompt_member_fields()
+                m = service.create_member(
+                    name,
+                    email,
+                    phone,
+                    membership_plan,
+                    notes=notes,
+                )
                 print_success(f"Member created with id {m.id}")
                 pause()
 
@@ -438,14 +494,32 @@ def run_member_menu() -> None:
                 if m is None:
                     print_error("Member not found")
                 else:
-                    print_success(f"[{m.id}] {m.name}")
+                    print_section("Member profile")
+                    show_member_profile(m)
                 pause()
 
             elif option == "4":
                 member_id = prompt_member_id("Member to update")
-                name = prompt_text("New name")
-                m = service.update_member(member_id, name)
-                print_success(f"Member updated: [{m.id}] {m.name}")
+                existing = service.get_member(member_id)
+                if existing is None:
+                    print_error("Member not found")
+                else:
+                    (
+                        name,
+                        email,
+                        phone,
+                        membership_plan,
+                        notes,
+                    ) = prompt_member_fields(existing=existing)
+                    m = service.update_member(
+                        member_id,
+                        name,
+                        email,
+                        phone,
+                        membership_plan,
+                        notes=notes,
+                    )
+                    print_success(f"Member updated: [{m.id}] {m.name}")
                 pause()
 
             elif option == "5":

@@ -2,7 +2,7 @@ from datetime import time
 
 import pytest
 
-from conftest import create_test_trainer
+from conftest import create_test_member, create_test_trainer
 from db import init_schema, get_connection
 import service
 import repository as repo
@@ -20,8 +20,8 @@ def clean_db():
 
 def test_enroll_member_capacity_and_overlap():
     trainer = create_test_trainer("Entrenador 1")
-    m1 = service.create_member("Miembro 1")
-    m2 = service.create_member("Miembro 2")
+    m1 = create_test_member("Miembro 1", email="m1@gym.com")
+    m2 = create_test_member("Miembro 2", email="m2@gym.com")
 
     c1 = service.create_class(
         "Spinning",
@@ -54,7 +54,7 @@ def test_enroll_member_capacity_and_overlap():
 
 def test_mark_attendance_requires_enrollment():
     trainer = create_test_trainer("T")
-    member = service.create_member("M")
+    member = create_test_member("M", email="m@gym.com")
     gym_class = service.create_class(
         "Clase",
         trainer.id,

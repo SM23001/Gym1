@@ -2,7 +2,7 @@ from datetime import time
 
 import pytest
 
-from conftest import create_test_trainer
+from conftest import create_test_member, create_test_trainer
 from db import init_schema, get_connection
 import service
 
@@ -20,7 +20,7 @@ def clean_db():
 
 def _setup_enrollment():
     trainer = create_test_trainer("T")
-    member = service.create_member("M")
+    member = create_test_member("M", email="m@gym.com")
     gym_class = service.create_class(
         "Spinning",
         trainer.id,
@@ -54,7 +54,7 @@ def test_is_enrolled_true():
 
 def test_is_enrolled_false():
     trainer = create_test_trainer("T")
-    member = service.create_member("M")
+    member = create_test_member("M", email="m@gym.com")
     gym_class = service.create_class(
         "Yoga",
         trainer.id,
@@ -67,7 +67,7 @@ def test_is_enrolled_false():
 
 
 def test_is_enrolled_invalid_class():
-    member = service.create_member("M")
+    member = create_test_member("M", email="m@gym.com")
     with pytest.raises(service.BusinessError, match="Clase no existe"):
         service.is_enrolled(999, member.id)
 
@@ -95,7 +95,7 @@ def test_unenroll_member():
 
 def test_unenroll_not_enrolled():
     trainer = create_test_trainer("T")
-    member = service.create_member("M")
+    member = create_test_member("M", email="m@gym.com")
     gym_class = service.create_class(
         "Clase",
         trainer.id,
@@ -109,7 +109,7 @@ def test_unenroll_not_enrolled():
 
 
 def test_unenroll_invalid_class():
-    member = service.create_member("M")
+    member = create_test_member("M", email="m@gym.com")
     with pytest.raises(service.BusinessError, match="Clase no existe"):
         service.unenroll_member(999, member.id)
 
