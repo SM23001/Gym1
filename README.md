@@ -16,9 +16,10 @@ A **command-line (CLI)** gym management system in Python with **PostgreSQL** per
 6. [Running the application](#running-the-application)
 7. [Software architecture model](#software-architecture-model)
 8. [Module structure (technical design)](#module-structure-technical-design)
-9. [Tests](#tests)
-10. [Agent development](#agent-development)
-11. [Team roles 3 collaborators](#Team-roles-3-collaborators)  
+9. [Application authentication (planned)](#application-authentication-planned)
+10. [Tests](#tests)
+11. [Agent development](#agent-development)
+12. [Team roles 3 collaborators](#Team-roles-3-collaborators)  
 ---
 
 ## Prerequisites
@@ -141,6 +142,8 @@ The menu includes, among other options:
 
 Business-rule errors are shown as clear messages (`BusinessError`, input validation) without crashing the application.
 
+> **Note:** Application-level staff login is **not implemented yet**. See [Application authentication (planned)](#application-authentication-planned) for the recommended design (local username/password, roles, and why OAuth is deferred).
+
 ---
 
 ## Software architecture model
@@ -183,6 +186,139 @@ Business-rule errors are shown as clear messages (`BusinessError`, input validat
 - **`conftest.py`** — Adjusts `sys.path` for pytest from the project root.
 
 - **`tests/`** — Service and persistence tests (see [Tests](#tests)).
+
+---
+
+## Application authentication (planned)
+
+The CLI currently has **no application-level authentication**: anyone who can run `python cli.py` and reach PostgreSQL can use every menu option. The `GYM_DB_*` variables are **database** credentials only—they do not identify gym staff.
+
+This section documents the **recommended approach** for adding staff authentication, based on architectural review of this project (CLI scope, layered design, and team workflow). Implementation is planned; details below are the target design.
+
+### App users vs gym members
+
+| Concept | Purpose | Status |
+|---------|---------|--------|
+| **App user (staff/admin)** | Operates the system (registers trainers, enrolls members, records attendance) | **Planned** — new `app_users` table |
+| **Gym member** | Takes classes; already modeled as `Member` in `models.py` | **Exists** — not the same as login accounts in v1 |
+
+Do not merge staff accounts and gym members in the first version. Member self-service login (e.g. “my classes”) is a separate feature for later.
+
+### Recommended approach: local login with hashed passwords
+
+For this CLI gym admin tool, the best fit is **username + password** stored in PostgreSQL with **bcrypt** (or **argon2-cffi**) hashing—not OAuth, JWT, or SSO.
+
+| Approach | Fit for Gym1 |
+|----------|----------------|
+| **Local auth (recommended)** | Login at CLI startup; simple; matches layered architecture; easy to test with pytest |
+| **OAuth / OIDC** | Better when you add a web UI, REST API, or corporate SSO—not the default for a local CLI |
+| **JWT sessions** | Useful once there is an HTTP API; unnecessary for a single in-memory `current_user` after CLI login |
+
+**Why not OAuth here?** OAuth is designed for delegated access via an identity provider (Google, Microsoft, etc.) over browser redirects and tokens. A local CLI can use OAuth (device flow or PKCE), but it adds client registration, token storage, and IdP dependency without much benefit for a single-gym staff tool. If the project later exposes a **web API** or needs **SSO**, add **OpenID Connect** at that layer and map IdP identity to `app_users`.
+
+### Target schema
+
+```sql
+CREATE TABLE IF NOT EXISTS app_users (
+    id SERIAL PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'staff',  -- e.g. 'admin' | 'staff'
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
+
+Add an `AppUser` dataclass in `models.py` (id, username, role, active—**never** return plain passwords from the repository).
+
+### Layer placement
+
+Follow the existing dependency flow: **CLI → service → repository → database**.
+
+| Layer | Module | Responsibility |
+|-------|--------|------------------|
+| **Infrastructure** | `db.py` | Add `app_users` to `init_schema()` |
+| **Domain** | `models.py` | `AppUser` dataclass |
+| **Data access** | `repository.py` | `create_app_user`, `get_app_user_by_username`, etc. |
+| **Service** | `service.py` | `authenticate()`, optional `register_app_user()`, `require_role()` |
+| **Presentation** | `cli.py` | Login loop before the main menu; pass `current_user` into service calls |
+
+Password comparison and hashing live in the **service** layer (or a small dedicated module called from service). The repository returns stored hashes; it does not implement bcrypt details.
+
+### User flow (planned)
+
+1. `init_schema()` (as today).
+2. Prompt for username and password (`getpass` for masked input).
+3. Call `service.authenticate()`; on failure, show a **generic** message (“Invalid username or password”) and retry or exit.
+4. On success, keep `current_user` in memory and show the main menu.
+5. Optional: **Logout** clears `current_user` and returns to login.
+
+### Roles and authorization
+
+- **Authentication** — who you are (login).
+- **Authorization** — what you may do (roles).
+
+Suggested roles:
+
+| Role | Access |
+|------|--------|
+| **`admin`** | Full CRUD plus user management |
+| **`staff`** | Day-to-day operations (enroll, attendance, lists); optional blocks on destructive deletes |
+
+Enforce roles in **`service.py`** (e.g. `require_role(actor, "admin")` at the start of sensitive functions), not only by hiding menu items in the CLI. That keeps authorization testable without running the full menu.
+
+### Security basics
+
+- Hash passwords with **bcrypt** or **argon2-cffi**—never plaintext, never plain SHA256/MD5.
+- Use **`getpass`** for password input in the terminal.
+- Use the same error message for unknown user and wrong password.
+- Use an **`active`** flag to disable accounts without deleting rows.
+- Do not confuse **`GYM_DB_USER` / `GYM_DB_PASSWORD`** (PostgreSQL connection) with application staff accounts.
+
+### Bootstrap: first admin
+
+Before anyone can log in, create one admin user via one of:
+
+1. One-time SQL insert with a precomputed bcrypt hash.
+2. A manual **`seed_admin.py`** script run once after deploy.
+3. First-run prompt when `app_users` is empty: “Create admin account?”
+
+Document the chosen method here when implemented. Do not commit real passwords to the repository.
+
+### Dependencies (when implemented)
+
+Add to `requirements.txt`:
+
+```text
+bcrypt>=4.0,<5.0
+```
+
+(or `argon2-cffi` as an alternative).
+
+### Testing (when implemented)
+
+- Extend the autouse **`clean_db`** fixture to `TRUNCATE app_users` (respect FK order if added later).
+- Add tests for: successful login, wrong password, inactive user, duplicate username, role checks on protected operations.
+- Keep auth logic in the service layer so tests call `authenticate()` directly without the CLI.
+
+### Future evolution
+
+| Change | Auth evolution |
+|--------|----------------|
+| **REST API** (FastAPI/Flask) | Session cookies or JWT after the same `authenticate()`; or OIDC at the API |
+| **Web UI** | Reuse the same service auth; add a browser login page |
+| **Corporate SSO** | OIDC in front of the API; map IdP `sub` / email to `app_users` |
+| **Member portal** | Separate credentials or link to `members`; still not OAuth by default |
+
+Design **`authenticate(username, password) -> AppUser`** in the service layer so the identity source can change later without rewriting enrollment or attendance logic.
+
+### Suggested work split
+
+| Person | Tasks |
+|--------|--------|
+| **A — Core** | Schema, `AppUser` model, repository methods, `authenticate` / hashing / role checks in service |
+| **B — UI/CLI** | Login screen, logout, wire `current_user`; hide admin-only menu options by role |
+| **C — Quality + Docs** | Auth tests, `clean_db` updates, bootstrap docs, keep this section in sync with code |
 
 ---
 
