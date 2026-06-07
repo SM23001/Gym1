@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "gym-postgres": {
+      "command": "bash",
+      "args": ["scripts/run-mcp-postgres.sh"]
+    }
+  }
+}

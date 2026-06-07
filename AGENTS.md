@@ -79,6 +79,18 @@ Follow this order and match existing patterns:
 | UI/CLI | `cli.py`, `ui.py`, `colors.py` |
 | Quality + docs | `tests/`, `conftest.py`, `README.md`, `AGENTS.md` |
 
+## MCP (Cursor)
+
+Project MCP config: [`.cursor/mcp.json`](.cursor/mcp.json) — **gym-postgres** server for schema inspection and read queries during development.
+
+**Requirements:** Node.js (`npx`) and a reachable PostgreSQL test database (`gymdb_test`).
+
+1. Copy [`.env.example`](.env.example) to `.env` (same `GYM_DB_*` vars as the app).
+2. Restart Cursor or toggle the server in **Settings → MCP**.
+3. The wrapper [`scripts/run-mcp-postgres.sh`](scripts/run-mcp-postgres.sh) loads `.env` and **always** connects to `gymdb_test`, not production `gymdb`.
+
+Use MCP for debugging and exploration only. Business rules live in `service.py`; prefer `make test` to verify behavior.
+
 ## Constraints
 
 - Never commit `.env` (secrets stay local)
