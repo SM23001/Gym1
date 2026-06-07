@@ -49,6 +49,17 @@ make run
 # or: .venv/bin/python cli.py
 ```
 
+## Seed demo data
+
+Load sample trainers, members, classes, enrollments, and attendance via the service layer:
+
+```bash
+make seed
+# or: .venv/bin/python seed.py --reset
+```
+
+Use **`GYM_DB_NAME=gymdb`** in `.env` (not `gymdb_test`). The script refuses to seed the test database. Without `--reset`, seeding is skipped if trainers already exist.
+
 ## Architecture (do not violate)
 
 | Layer | Modules | Responsibility |

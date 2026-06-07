@@ -1,4 +1,4 @@
-.PHONY: setup test run check-db
+.PHONY: setup test run check-db seed
 
 setup:
 	python -m venv .venv
@@ -12,3 +12,6 @@ run:
 
 check-db:
 	.venv/bin/python -c "from db import get_connection; get_connection().__enter__(); print('DB OK')"
+
+seed:
+	.venv/bin/python seed.py --reset
