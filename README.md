@@ -34,7 +34,13 @@ A **command-line (CLI)** gym management system in Python with **PostgreSQL** per
 
 1. Clone the repository and change into the project directory.
 
-2. Create and activate a virtual environment, then install dependencies:
+2. Create a virtual environment and install dependencies:
+
+   ```bash
+   make setup
+   ```
+
+   Or manually:
 
    ```bash
    python -m venv .venv
@@ -47,6 +53,12 @@ A **command-line (CLI)** gym management system in Python with **PostgreSQL** per
 4. Add a `.env` file at the project root with the `GYM_DB_*` variables (see [Environment variables](#environment-variables)), or rely on the defaults in `config.py` if they match your environment.
 
 5. Run the CLI:
+
+   ```bash
+   make run
+   ```
+
+   Or with the virtual environment activated:
 
    ```bash
    python cli.py
@@ -110,6 +122,12 @@ GYM_DB_PASSWORD=gympass
 ## Installation
 
 ```bash
+make setup
+```
+
+Or manually:
+
+```bash
 python -m venv .venv
 source .venv/bin/activate
 # On Windows: .venv\Scripts\activate
@@ -125,6 +143,14 @@ Main dependencies (`requirements.txt`):
 ---
 
 ## Running the application
+
+From the project root (no need to activate the virtual environment first):
+
+```bash
+make run
+```
+
+Or manually:
 
 ```bash
 source .venv/bin/activate
@@ -300,6 +326,7 @@ bcrypt>=4.0,<5.0
 - Extend the autouse **`clean_db`** fixture to `TRUNCATE app_users` (respect FK order if added later).
 - Add tests for: successful login, wrong password, inactive user, duplicate username, role checks on protected operations.
 - Keep auth logic in the service layer so tests call `authenticate()` directly without the CLI.
+- Run the full suite after changes: `make test`
 
 ### Future evolution
 
@@ -404,7 +431,13 @@ Adds the project root to `sys.path` so `db`, `service`, `repository`, etc. impor
 
 ### How to run
 
-From the project root:
+From the project root, run the full suite:
+
+```bash
+make test
+```
+
+Other examples (with the virtual environment active, or use `.venv/bin/python -m pytest`):
 
 ```bash
 pytest
