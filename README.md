@@ -12,14 +12,15 @@ A **command-line (CLI)** gym management system in Python with **PostgreSQL** per
 2. [Quick start](#quick-start)
 3. [PostgreSQL setup](#postgresql-setup)
 4. [Environment variables](#environment-variables)
-5. [Installation](#installation)
-6. [Running the application](#running-the-application)
-7. [Software architecture model](#software-architecture-model)
-8. [Module structure (technical design)](#module-structure-technical-design)
-9. [Application authentication (planned)](#application-authentication-planned)
-10. [Tests](#tests)
-11. [Agent development](#agent-development)
-12. [Team roles 3 collaborators](#Team-roles-3-collaborators)  
+5. [Makefile](#makefile)
+6. [Installation](#installation)
+7. [Running the application](#running-the-application)
+8. [Software architecture model](#software-architecture-model)
+9. [Module structure (technical design)](#module-structure-technical-design)
+10. [Application authentication (planned)](#application-authentication-planned)
+11. [Tests](#tests)
+12. [Agent development](#agent-development)
+13. [Team roles 3 collaborators](#Team-roles-3-collaborators)  
 ---
 
 ## Prerequisites
@@ -50,7 +51,13 @@ A **command-line (CLI)** gym management system in Python with **PostgreSQL** per
 
 3. Create the database and user in PostgreSQL (see [PostgreSQL setup](#postgresql-setup)).
 
-4. Add a `.env` file at the project root with the `GYM_DB_*` variables (see [Environment variables](#environment-variables)), or rely on the defaults in `config.py` if they match your environment.
+4. Copy the environment template and adjust if needed:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   See [Environment variables](#environment-variables). Defaults in `config.py` apply when `.env` is missing.
 
 5. Run the CLI:
 
@@ -81,6 +88,14 @@ GRANT ALL PRIVILEGES ON DATABASE gymdb TO gymuser;
 \q
 ```
 
+For **pytest**, use a separate database so `TRUNCATE` never touches production data:
+
+```sql
+CREATE DATABASE gymdb_test OWNER gymuser;
+```
+
+Then set `GYM_DB_NAME=gymdb_test` in `.env` (see [`.env.example`](.env.example)).
+
 Adjust names and passwords to match your security policy.
 
 ---
@@ -107,15 +122,32 @@ You can define them in a `.env` file at the project root (loaded automatically w
 | `GYM_DB_USER` | `gymuser` |
 | `GYM_DB_PASSWORD` | `gympass` |
 
-Example `.env` for local development:
+Example `.env` for local development (LAN server at `192.168.1.34`):
 
 ```bash
-GYM_DB_HOST=localhost
+GYM_DB_HOST=192.168.1.34
 GYM_DB_PORT=5432
 GYM_DB_NAME=gymdb
 GYM_DB_USER=gymuser
 GYM_DB_PASSWORD=gympass
 ```
+
+A template is committed as [`.env.example`](.env.example) (uses `gymdb_test` for safe testing).
+
+---
+
+## Makefile
+
+Short commands from the project root (defined in [`Makefile`](Makefile)). They use `.venv/bin/python` so you do not need to activate the virtual environment first.
+
+| Command | Action |
+|---------|--------|
+| `make setup` | Create `.venv` and `pip install -r requirements.txt` |
+| `make test` | Run the full pytest suite (`pytest -q`) |
+| `make run` | Start the CLI |
+| `make check-db` | Verify PostgreSQL connectivity (`DB OK` or connection error) |
+
+Requires `make` on your system (`sudo apt install make` on Debian/Ubuntu if missing).
 
 ---
 
@@ -157,16 +189,34 @@ source .venv/bin/activate
 python cli.py
 ```
 
-The menu includes, among other options:
+The main menu:
 
-1. Register trainer  
-2. Register member  
-3. Register class (day, time slot, capacity)  
-4. Enroll member in class  
-5. Record attendance  
-6. List classes  
+1. **Trainers** — add, list, view profile, update, delete, list classes by trainer  
+2. **Members** — member CRUD and related lists  
+3. **Classes** — class CRUD (day, time slot, capacity, trainer)  
+4. **Enrollment** — enroll / unenroll members in classes  
+5. **Attendance** — record and manage attendance  
 
 Business-rule errors are shown as clear messages (`BusinessError`, input validation) without crashing the application.
+
+### Trainer profile
+
+Trainers have a full profile (not just a name). Fields are collected in the **Trainers** submenu and stored in PostgreSQL.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Trainer’s full name |
+| `email` | Yes | Unique contact email (validated) |
+| `phone` | Yes | Phone number (min. 7 digits) |
+| `specialty` | Yes | Main discipline (e.g. Yoga, CrossFit) |
+| `bio` | No | Short biography / background text |
+| `years_experience` | No | Integer ≥ 0 if provided |
+
+**CLI:** option **1** prompts all fields; option **3** shows the full profile; option **2** lists ID, name, specialty, and email.
+
+**Layers:** `models.Trainer` → `repository` (SQL) → `service` (validation, duplicate email) → `cli.py` (`prompt_trainer_fields`, `show_trainer_profile`).
+
+Existing databases on the server get new columns via migrations in `init_schema()` (backfill for old trainer rows).
 
 > **Note:** Application-level staff login is **not implemented yet**. See [Application authentication (planned)](#application-authentication-planned) for the recommended design (local username/password, roles, and why OAuth is deferred).
 
@@ -178,7 +228,7 @@ Business-rule errors are shown as clear messages (`BusinessError`, input validat
 
 | Layer | Module(s) | Responsibility |
 |------|-----------|----------------|
-| **Presentation** | `cli.py`, `colors.py` | Menu, input, and output. `colors.py` defines ANSI codes and the `c()` helper for colored text. No business logic. |
+| **Presentation** | `cli.py`, `ui.py`, `colors.py` | Menu, input, and output. `ui.py` holds shared display helpers; `colors.py` defines ANSI codes and `c()`. No business logic. |
 | **Application / Service** | `service.py` | Use cases, rules (capacity, schedule conflicts, validations), and delegation to the repository. |
 | **Domain** | `models.py` | Entities (`Trainer`, `Member`, `GymClass`) as dataclasses; data only. |
 | **Data access** | `repository.py` | Repository pattern on PostgreSQL (CRUD and queries). The service does not write SQL. |
@@ -197,19 +247,21 @@ Business-rule errors are shown as clear messages (`BusinessError`, input validat
 
 - **`config.py`** — Database settings via `python-dotenv`. `Settings` class (`db_host`, `db_port`, `db_name`, `db_user`, `db_password`, `dsn` property). `get_settings()` is used from `db.py`.
 
-- **`db.py`** — PostgreSQL connection. `get_connection()` as a context manager (commit/rollback). `init_schema()` creates the `trainers`, `members`, `classes`, `enrollments`, and `attendance` tables if they do not exist. Called when the CLI starts and in tests.
+- **`db.py`** — PostgreSQL connection. `get_connection()` as a context manager (commit/rollback). `init_schema()` creates the `trainers`, `members`, `classes`, `enrollments`, and `attendance` tables if they do not exist, and runs `ALTER TABLE` migrations (e.g. trainer profile columns on existing DBs). Called when the CLI starts and in tests.
 
-- **`models.py`** — `Trainer`, `Member`, and `GymClass` as `@dataclass` with static typing.
+- **`models.py`** — `Trainer` (name, email, phone, specialty, bio, years_experience), `Member`, and `GymClass` as `@dataclass` with static typing.
 
 - **`repository.py`** — Persistence: `create_trainer`, `create_member`, `create_class`, `get_*`, `list_classes`, metrics (`count_enrollments`, `is_member_enrolled`, `list_member_classes`), `enroll_member`, `mark_attendance`. Uses `RealDictCursor` to map rows to dataclasses. No business rules.
 
-- **`service.py`** — `BusinessError` exception. High-level functions: create operations with time validation; `enroll_member` (existence, capacity, duplicates, overlap with the member’s other classes); `mark_attendance` only when enrolled; `list_classes`.
+- **`service.py`** — `BusinessError` exception. Trainer profile validation (email, phone, specialty, years_experience). High-level functions: create operations with time validation; `enroll_member` (existence, capacity, duplicates, overlap with the member’s other classes); `mark_attendance` only when enrolled; `list_classes`.
 
-- **`cli.py`** — `main()`: `init_schema()`, menu loop, input parsing and service calls; handles `BusinessError` and `ValueError`.
+- **`cli.py`** — `main()`: `init_schema()`, menu loop, input parsing and service calls; handles `BusinessError` and `ValueError`. Trainer flows use `prompt_trainer_fields()` and `show_trainer_profile()`.
+
+- **`ui.py`** — Shared terminal UI helpers (banner, tables, prompts) used by `cli.py`.
 
 - **`colors.py`** — ANSI constants and `c(text, color)` for terminal messages.
 
-- **`conftest.py`** — Adjusts `sys.path` for pytest from the project root.
+- **`conftest.py`** — Adds project root to `sys.path` for pytest. Provides `create_test_trainer()` (and `create_test_member()`) helpers with auto-generated unique emails for tests.
 
 - **`tests/`** — Service and persistence tests (see [Tests](#tests)).
 
@@ -362,14 +414,24 @@ They exercise business logic and the repository against a **real PostgreSQL data
 
 Adds the project root to `sys.path` so `db`, `service`, `repository`, etc. import correctly without installing the project as a package.
 
+Use **`create_test_trainer()`** in tests instead of calling `service.create_trainer()` directly — it supplies unique emails and default phone/specialty. Example:
+
+```python
+from conftest import create_test_trainer
+
+trainer = create_test_trainer("Ana", email="ana@gym.com")
+```
+
 ### Layout
 
 | File | Contents |
 |------|----------|
 | `tests/test_service.py` | Service: enrollment, capacity, schedules, attendance. |
-| `tests/test_trainer_crud.py` | Trainer CRUD: create, read, list, update, delete, and validation rules. |
+| `tests/test_trainer_crud.py` | Trainer CRUD and profile validation (email, phone, specialty, bio, experience). |
 | `tests/test_member_crud.py` | Member CRUD: create, read, list, update, delete, and cascade on delete. |
 | `tests/test_class_crud.py` | Class CRUD: create, read, list, update, delete, field validation, and capacity rules. |
+| `tests/test_enrollment_crud.py` | Enrollment list, `is_enrolled`, `unenroll_member`. |
+| `tests/test_attendance_crud.py` | Attendance CRUD and listing by class/member. |
 
 ### Fixtures
 
@@ -388,14 +450,21 @@ Adds the project root to `sys.path` so `db`, `service`, `repository`, etc. impor
 
 | Test | What it checks |
 |------|----------------|
-| `test_create_trainer` | Successful trainer creation. |
+| `test_create_trainer` | Successful trainer creation with full profile. |
 | `test_create_trainer_empty_name` | Rejects blank or whitespace-only names. |
+| `test_create_trainer_invalid_email` | Rejects malformed email. |
+| `test_create_trainer_invalid_phone` | Rejects phone with too few digits. |
+| `test_create_trainer_empty_specialty` | Rejects blank specialty. |
+| `test_create_trainer_duplicate_email` | Rejects duplicate email on create. |
+| `test_create_trainer_negative_experience` | Rejects negative `years_experience`. |
 | `test_get_trainer` / `test_get_trainer_not_found` | Read by id; returns `None` when missing. |
 | `test_list_trainers` | Lists all trainers in order. |
-| `test_update_trainer` | Updates name while keeping the same id. |
+| `test_update_trainer` | Updates profile fields while keeping the same id. |
 | `test_update_trainer_not_found` / `test_update_trainer_empty_name` | Update errors for missing trainer and empty name. |
+| `test_update_trainer_duplicate_email` | Rejects email already used by another trainer. |
 | `test_delete_trainer` | Deletes an existing trainer. |
 | `test_delete_trainer_not_found` | Delete error when trainer does not exist. |
+| `test_list_classes_by_trainer` | Lists classes assigned to a trainer. |
 | `test_delete_trainer_with_classes` | Blocks delete when the trainer still has assigned classes. |
 
 #### `tests/test_member_crud.py`
@@ -470,7 +539,7 @@ pytest tests/test_attendance_crud.py -q
 ```
 
 
-**Important:** tests run `TRUNCATE` on every case. Do not use a database you need to keep; for a dedicated test DB you can set e.g. `GYM_DB_NAME=gymdb_test` in `.env`.
+**Important:** tests run `TRUNCATE` on every case. Do not use a database you need to keep. Prefer `GYM_DB_NAME=gymdb_test` in `.env` and create that database on the server (see [PostgreSQL setup](#postgresql-setup)). If `gymdb_test` does not exist, tests fail with a connection error — use `GYM_DB_NAME=gymdb` only when that is safe for your environment.
 
 ---
 
@@ -493,6 +562,8 @@ This project includes scaffolding for [Cursor](https://cursor.com) and other AI 
 
 **Cursor rules** in [`.cursor/rules/`](.cursor/rules/) give the agent persistent context about architecture and test conventions.
 
+**Adding a feature (layer order):** `models.py` → `repository.py` → `service.py` → `cli.py` / `ui.py` → `tests/`. Example: trainer profile fields follow this path; see [Trainer profile](#trainer-profile).
+
 Example prompt when working with an agent:
 
 > Add [feature]. Follow AGENTS.md layer boundaries. Run `make test` when done.
@@ -504,5 +575,5 @@ Example prompt when working with an agent:
 |---|---|---|---|
 | **A — Core (business + data)** | Service + persistence | `service.py`, `repository.py`, `db.py`, `config.py`, `models.py` | Business rules, SQL queries, schema updates, dataclasses, env variables. |
 | **B — UI/CLI** | Presentation layer | `cli.py`, `colors.py` | Menu options, input parsing, output formatting, user messages, catching/displaying `BusinessError`. |
-| **C — Quality + Docs** | Tests + documentation | `tests/`, `conftest.py`, `README.md` | Tests/fixtures, CI mindset, onboarding docs, collaboration rules, keeping docs in sync with changes. |
+| **C — Quality + Docs** | Tests + documentation | `tests/`, `conftest.py`, `README.md`, `AGENTS.md` | Tests/fixtures, CI mindset, onboarding docs, agent guide, collaboration rules, keeping docs in sync with changes. |
 
