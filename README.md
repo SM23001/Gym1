@@ -15,12 +15,13 @@ A **command-line (CLI)** gym management system in Python with **PostgreSQL** per
 5. [Makefile](#makefile)
 6. [Installation](#installation)
 7. [Running the application](#running-the-application)
-8. [Software architecture model](#software-architecture-model)
-9. [Module structure (technical design)](#module-structure-technical-design)
-10. [Application authentication (planned)](#application-authentication-planned)
-11. [Tests](#tests)
-12. [Agent development](#agent-development)
-13. [Team roles 3 collaborators](#Team-roles-3-collaborators)  
+8. [Data seeding](#data-seeding)
+9. [Software architecture model](#software-architecture-model)
+10. [Module structure (technical design)](#module-structure-technical-design)
+11. [Application authentication (planned)](#application-authentication-planned)
+12. [Tests](#tests)
+13. [Agent development](#agent-development)
+14. [Team roles 3 collaborators](#Team-roles-3-collaborators)  
 ---
 
 ## Prerequisites
@@ -73,7 +74,9 @@ A **command-line (CLI)** gym management system in Python with **PostgreSQL** per
 
    The first run creates the required tables (`init_schema`).
 
-6. Use the interactive menu to operate the system.
+6. *(Optional)* Load demo data — set `GYM_DB_NAME=gymdb` in `.env`, then run `make seed` (see [Data seeding](#data-seeding)).
+
+7. Use the interactive menu to operate the system.
 
 ---
 
@@ -146,6 +149,7 @@ Short commands from the project root (defined in [`Makefile`](Makefile)). They u
 | `make test` | Run the full pytest suite (`pytest -q`) |
 | `make run` | Start the CLI |
 | `make check-db` | Verify PostgreSQL connectivity (`DB OK` or connection error) |
+| `make seed` | Load demo data into the database (`seed.py --reset`) |
 
 Requires `make` on your system (`sudo apt install make` on Debian/Ubuntu if missing).
 
@@ -219,6 +223,51 @@ Trainers have a full profile (not just a name). Fields are collected in the **Tr
 Existing databases on the server get new columns via migrations in `init_schema()` (backfill for old trainer rows).
 
 > **Note:** Application-level staff login is **not implemented yet**. See [Application authentication (planned)](#application-authentication-planned) for the recommended design (local username/password, roles, and why OAuth is deferred).
+
+---
+
+## Data seeding
+
+Use [`seed.py`](seed.py) to populate the database with **demo data** for local development and demos. All inserts go through the **service layer** (same validation rules as the CLI).
+
+### What gets created
+
+| Entity | Count | Examples |
+|--------|-------|----------|
+| Trainers | 3 | Ana Ruiz (Spinning), Carlos Vega (Yoga), Laura Méndez (CrossFit) |
+| Members | 4 | Juan Pérez, María López, Pedro Sánchez, Sofía Torres |
+| Classes | 4 | Spinning, Yoga, CrossFit, Evening Spin |
+| Enrollments | 7 | Members assigned to classes (capacity and schedule rules enforced) |
+| Attendance | 3 | Sample attendance for enrolled members |
+
+### Requirements
+
+- PostgreSQL reachable with `GYM_DB_*` configured in [`.env`](.env.example).
+- Use **`GYM_DB_NAME=gymdb`** for seeding — the script **refuses `gymdb_test`** (reserved for pytest, which truncates tables on every test).
+
+### Commands
+
+From the project root:
+
+```bash
+make seed
+```
+
+Or directly:
+
+```bash
+.venv/bin/python seed.py --reset
+```
+
+| Flag / behavior | Description |
+|-----------------|-------------|
+| `--reset` | `TRUNCATE` all gym tables, then insert demo data (what `make seed` runs) |
+| No flag, DB empty | Seeds demo data |
+| No flag, data exists | Prints a message and exits without changes; use `--reset` to replace |
+
+After seeding, run `make run` and use the menus — lists should show trainers, members, classes, enrollments, and attendance.
+
+Tests for seeding live in [`tests/test_seed.py`](tests/test_seed.py) (calls `seed_data()` against `gymdb_test` after truncate; does not run the CLI entry point).
 
 ---
 
@@ -559,6 +608,7 @@ This project includes scaffolding for [Cursor](https://cursor.com) and other AI 
 | `make test` | Run the full pytest suite |
 | `make run` | Start the CLI (`python cli.py`) |
 | `make check-db` | Verify PostgreSQL connectivity |
+| `make seed` | Load demo data (`seed.py --reset`; use `gymdb`, not `gymdb_test`) |
 
 **Cursor rules** in [`.cursor/rules/`](.cursor/rules/) give the agent persistent context about architecture and test conventions.
 
