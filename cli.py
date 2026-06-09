@@ -866,6 +866,14 @@ def run_attendance_menu() -> None:
                     show_attendance_records(
                         service.list_attendance_by_class(class_id)
                     )
+                    print_section(
+                        f"Enrolled members of [{gym_class.id}] {gym_class.name}"
+                    )
+                    members = service.list_class_members(class_id)
+                    if not members:
+                        print_empty("(no members enrolled in this class)")
+                    else:
+                        show_member_rows(members)
                 pause()
 
             elif option == "6":
