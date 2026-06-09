@@ -1,11 +1,24 @@
 from datetime import time
 
-from models import GymClass, Enrollment, Attendance
+from models import GymClass, ClassSchedule, Enrollment, Attendance
 import repository as repo
 
 
 class BusinessError(Exception):
     pass
+
+
+DAY_NAMES = (
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+)
+
+ScheduleSlot = tuple[int, time, time]
 
 
 def _validate_email(email: str) -> str:
@@ -211,46 +224,64 @@ def delete_member(member_id: int) -> None:
     repo.delete_member(member_id)
 
 
-def _validate_class_fields(
-    name: str,
-    trainer_id: int,
+def _validate_schedule_slot(
     day_of_week: int,
     start_time: time,
     end_time: time,
+) -> None:
+    if not 0 <= day_of_week <= 6:
+        raise BusinessError("El día de la semana debe estar entre 0 y 6")
+    if end_time <= start_time:
+        raise BusinessError("La hora de fin debe ser posterior a la de inicio")
+
+
+def _validate_schedules(schedules: list[ScheduleSlot]) -> None:
+    if not schedules:
+        raise BusinessError("La clase debe tener al menos un horario")
+    seen: set[ScheduleSlot] = set()
+    for day_of_week, start_time, end_time in schedules:
+        _validate_schedule_slot(day_of_week, start_time, end_time)
+        slot = (day_of_week, start_time, end_time)
+        if slot in seen:
+            raise BusinessError("Horario duplicado en la misma clase")
+        seen.add(slot)
+    for i, slot_a in enumerate(schedules):
+        for slot_b in schedules[i + 1 :]:
+            if _slots_overlap(slot_a, slot_b):
+                raise BusinessError(
+                    "Los horarios de la clase se solapan en el mismo día"
+                )
+
+
+def _validate_class_fields(
+    name: str,
+    trainer_id: int,
     capacity: int,
+    schedules: list[ScheduleSlot],
 ) -> str:
     name = name.strip()
     if not name:
         raise BusinessError("El nombre no puede estar vacío")
     if repo.get_trainer(trainer_id) is None:
         raise BusinessError("El entrenador no existe")
-    if not 0 <= day_of_week <= 6:
-        raise BusinessError("El día de la semana debe estar entre 0 y 6")
-    if end_time <= start_time:
-        raise BusinessError("La hora de fin debe ser posterior a la de inicio")
     if capacity <= 0:
         raise BusinessError("El cupo debe ser mayor que cero")
+    _validate_schedules(schedules)
     return name
 
 
 def create_class(
     name: str,
     trainer_id: int,
-    day_of_week: int,
-    start_time: time,
-    end_time: time,
     capacity: int,
+    schedules: list[ScheduleSlot],
 ) -> GymClass:
-    name = _validate_class_fields(
-        name, trainer_id, day_of_week, start_time, end_time, capacity
-    )
+    name = _validate_class_fields(name, trainer_id, capacity, schedules)
     return repo.create_class(
         name=name,
         trainer_id=trainer_id,
-        day_of_week=day_of_week,
-        start_time=start_time,
-        end_time=end_time,
         capacity=capacity,
+        schedules=schedules,
     )
 
 
@@ -262,16 +293,12 @@ def update_class(
     class_id: int,
     name: str,
     trainer_id: int,
-    day_of_week: int,
-    start_time: time,
-    end_time: time,
     capacity: int,
+    schedules: list[ScheduleSlot],
 ) -> GymClass:
     if repo.get_class(class_id) is None:
         raise BusinessError("Clase no existe")
-    name = _validate_class_fields(
-        name, trainer_id, day_of_week, start_time, end_time, capacity
-    )
+    name = _validate_class_fields(name, trainer_id, capacity, schedules)
     enrolled = repo.count_enrollments(class_id)
     if capacity < enrolled:
         raise BusinessError(
@@ -281,10 +308,8 @@ def update_class(
         class_id=class_id,
         name=name,
         trainer_id=trainer_id,
-        day_of_week=day_of_week,
-        start_time=start_time,
-        end_time=end_time,
         capacity=capacity,
+        schedules=schedules,
     )
     if gym_class is None:
         raise BusinessError("Clase no existe")
@@ -297,10 +322,29 @@ def delete_class(class_id: int) -> None:
     repo.delete_class(class_id)
 
 
-def _overlaps(c1: GymClass, c2: GymClass) -> bool:
-    if c1.day_of_week != c2.day_of_week:
+def _slot_key(slot: ScheduleSlot | ClassSchedule) -> tuple[int, time, time]:
+    if isinstance(slot, ClassSchedule):
+        return (slot.day_of_week, slot.start_time, slot.end_time)
+    return slot
+
+
+def _slots_overlap(
+    slot_a: ScheduleSlot | ClassSchedule,
+    slot_b: ScheduleSlot | ClassSchedule,
+) -> bool:
+    day_a, start_a, end_a = _slot_key(slot_a)
+    day_b, start_b, end_b = _slot_key(slot_b)
+    if day_a != day_b:
         return False
-    return not (c1.end_time <= c2.start_time or c2.end_time <= c1.start_time)
+    return not (end_a <= start_b or end_b <= start_a)
+
+
+def _classes_overlap(c1: GymClass, c2: GymClass) -> bool:
+    return any(
+        _slots_overlap(slot_a, slot_b)
+        for slot_a in c1.schedules
+        for slot_b in c2.schedules
+    )
 
 
 def enroll_member(class_id: int, member_id: int) -> None:
@@ -317,7 +361,9 @@ def enroll_member(class_id: int, member_id: int) -> None:
         raise BusinessError("Miembro ya inscrito en esta clase")
 
     for other in repo.list_member_classes(member_id):
-        if _overlaps(gym_class, other):
+        if other.id == class_id:
+            continue
+        if _classes_overlap(gym_class, other):
             raise BusinessError(
                 f"Choque de horario con la clase {other.id} - {other.name}"
             )
@@ -430,11 +476,26 @@ def list_class_members(class_id: int):
     return repo.list_class_members(class_id)
 
 
+def format_class_schedules(gym_class: GymClass) -> str:
+    if not gym_class.schedules:
+        return "(no schedule)"
+    parts = []
+    for schedule in sorted(
+        gym_class.schedules, key=lambda s: (s.day_of_week, s.start_time)
+    ):
+        parts.append(
+            f"{DAY_NAMES[schedule.day_of_week]} "
+            f"{schedule.start_time.strftime('%H:%M')}-"
+            f"{schedule.end_time.strftime('%H:%M')}"
+        )
+    return ", ".join(parts)
+
+
 def format_class(gym_class: GymClass) -> str:
     trainer_label = gym_class.trainer_name or str(gym_class.trainer_id)
     return (
         f"[{gym_class.id}] {gym_class.name} - Entrenador {trainer_label} - "
-        f"Día: {gym_class.day_of_week} {gym_class.start_time}-{gym_class.end_time} "
+        f"Horario: {format_class_schedules(gym_class)} "
         f"Cupo: {gym_class.capacity}"
     )
 

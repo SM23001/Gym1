@@ -8,7 +8,8 @@ from db import get_connection, init_schema
 import service
 
 _TRUNCATE_SQL = (
-    "TRUNCATE attendance, enrollments, classes, members, trainers RESTART IDENTITY"
+    "TRUNCATE attendance, enrollments, class_schedules, classes, "
+    "members, trainers RESTART IDENTITY CASCADE"
 )
 
 
@@ -62,23 +63,41 @@ def seed_data() -> None:
     )
 
     spinning = service.create_class(
-        "Spinning", ana.id, 0, time(9, 0), time(10, 0), 10
+        "Spinning",
+        ana.id,
+        10,
+        [(0, time(9, 0), time(10, 0))],
     )
-    yoga = service.create_class("Yoga", carlos.id, 1, time(18, 0), time(19, 0), 8)
+    fitness = service.create_class(
+        "Fitness",
+        ana.id,
+        20,
+        [(day, time(19, 0), time(20, 0)) for day in range(5)]
+        + [(5, time(6, 0), time(7, 0)), (6, time(6, 0), time(7, 0))],
+    )
+    yoga = service.create_class(
+        "Yoga",
+        carlos.id,
+        8,
+        [
+            (0, time(18, 0), time(19, 0)),
+            (4, time(18, 0), time(19, 0)),
+        ],
+    )
     crossfit = service.create_class(
-        "CrossFit", laura.id, 2, time(7, 0), time(8, 0), 12
-    )
-    evening_spin = service.create_class(
-        "Evening Spin", ana.id, 3, time(19, 0), time(20, 0), 10
+        "CrossFit",
+        laura.id,
+        12,
+        [(2, time(7, 0), time(8, 0))],
     )
 
     service.enroll_member(spinning.id, juan.id)
     service.enroll_member(spinning.id, maria.id)
     service.enroll_member(spinning.id, pedro.id)
+    service.enroll_member(fitness.id, juan.id)
     service.enroll_member(yoga.id, maria.id)
     service.enroll_member(yoga.id, sofia.id)
     service.enroll_member(crossfit.id, juan.id)
-    service.enroll_member(evening_spin.id, sofia.id)
 
     service.mark_attendance(spinning.id, juan.id)
     service.mark_attendance(spinning.id, maria.id)

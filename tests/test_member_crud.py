@@ -2,7 +2,7 @@ from datetime import time
 
 import pytest
 
-from conftest import create_test_member, create_test_trainer
+from conftest import TRUNCATE_GYM_TABLES, create_test_member, create_test_trainer
 from db import init_schema, get_connection
 import service
 
@@ -12,9 +12,7 @@ def clean_db():
     init_schema()
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                "TRUNCATE attendance, enrollments, classes, members, trainers RESTART IDENTITY"
-            )
+            cur.execute(TRUNCATE_GYM_TABLES)
     yield
 
 
@@ -133,18 +131,14 @@ def test_list_member_classes():
     c1 = service.create_class(
         "Spinning",
         trainer.id,
-        day_of_week=0,
-        start_time=time(9, 0),
-        end_time=time(10, 0),
-        capacity=10,
+        10,
+        [(0, time(9, 0), time(10, 0))],
     )
     service.create_class(
         "Yoga",
         trainer.id,
-        day_of_week=1,
-        start_time=time(11, 0),
-        end_time=time(12, 0),
-        capacity=8,
+        8,
+        [(1, time(11, 0), time(12, 0))],
     )
     service.enroll_member(c1.id, m1.id)
     classes = service.list_member_classes(m1.id)
@@ -160,10 +154,8 @@ def test_delete_member_cascades_enrollments():
     gym_class = service.create_class(
         "Clase",
         trainer.id,
-        day_of_week=0,
-        start_time=time(9, 0),
-        end_time=time(10, 0),
-        capacity=5,
+        5,
+        [(0, time(9, 0), time(10, 0))],
     )
     service.enroll_member(gym_class.id, member.id)
     service.delete_member(member.id)

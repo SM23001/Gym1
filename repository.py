@@ -4,7 +4,7 @@ from typing import List, Optional
 from psycopg2.extras import RealDictCursor
 
 from db import get_connection
-from models import Trainer, Member, GymClass, Enrollment, Attendance
+from models import Trainer, Member, GymClass, ClassSchedule, Enrollment, Attendance
 
 _TRAINER_COLUMNS = (
     "id, name, email, phone, specialty, bio, years_experience"
@@ -15,27 +15,98 @@ _MEMBER_COLUMNS = (
 )
 
 _CLASS_SELECT = """
-    c.id, c.name, c.trainer_id, c.day_of_week, c.start_time, c.end_time, c.capacity,
+    c.id, c.name, c.trainer_id, c.capacity,
     t.name AS trainer_name
 """
 
 _CLASS_RETURNING = """
-    id, name, trainer_id, day_of_week, start_time, end_time, capacity,
+    id, name, trainer_id, capacity,
     (SELECT name FROM trainers WHERE id = trainer_id) AS trainer_name
 """
 
+_SCHEDULE_COLUMNS = "id, class_id, day_of_week, start_time, end_time"
 
-def _class_from_row(row) -> GymClass:
+_CLASS_ORDER = """
+    ORDER BY first_slot.day_of_week NULLS LAST,
+             first_slot.start_time NULLS LAST,
+             c.id
+"""
+
+_CLASS_FROM = """
+    FROM classes c
+    JOIN trainers t ON t.id = c.trainer_id
+    LEFT JOIN LATERAL (
+        SELECT s.day_of_week, s.start_time
+        FROM class_schedules s
+        WHERE s.class_id = c.id
+        ORDER BY s.day_of_week, s.start_time
+        LIMIT 1
+    ) first_slot ON true
+"""
+
+
+def _schedule_from_row(row) -> ClassSchedule:
+    return ClassSchedule(
+        id=row["id"],
+        class_id=row["class_id"],
+        day_of_week=row["day_of_week"],
+        start_time=row["start_time"],
+        end_time=row["end_time"],
+    )
+
+
+def _class_from_row(row, schedules: list[ClassSchedule] | None = None) -> GymClass:
     return GymClass(
         id=row["id"],
         name=row["name"],
         trainer_id=row["trainer_id"],
-        day_of_week=row["day_of_week"],
-        start_time=row["start_time"],
-        end_time=row["end_time"],
         capacity=row["capacity"],
         trainer_name=row.get("trainer_name") or "",
+        schedules=schedules or [],
     )
+
+
+def _fetch_schedules_by_class_ids(class_ids: list[int]) -> dict[int, list[ClassSchedule]]:
+    if not class_ids:
+        return {}
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                f"""
+                SELECT {_SCHEDULE_COLUMNS}
+                FROM class_schedules
+                WHERE class_id = ANY(%s)
+                ORDER BY class_id, day_of_week, start_time
+                """,
+                (class_ids,),
+            )
+            rows = cur.fetchall()
+    grouped: dict[int, list[ClassSchedule]] = {class_id: [] for class_id in class_ids}
+    for row in rows:
+        schedule = _schedule_from_row(row)
+        grouped[schedule.class_id].append(schedule)
+    return grouped
+
+
+def _attach_schedules(classes: list[GymClass]) -> list[GymClass]:
+    if not classes:
+        return classes
+    schedules_by_id = _fetch_schedules_by_class_ids([c.id for c in classes])
+    for gym_class in classes:
+        gym_class.schedules = schedules_by_id.get(gym_class.id, [])
+    return classes
+
+
+def _insert_schedules(cur, class_id: int, schedules: list[tuple[int, time, time]]) -> None:
+    for day_of_week, start_time, end_time in schedules:
+        cur.execute(
+            """
+            INSERT INTO class_schedules
+                (class_id, day_of_week, start_time, end_time)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (class_id, day_of_week, start_time, end_time),
+        )
 
 
 def _trainer_from_row(row) -> Trainer:
@@ -111,26 +182,25 @@ def create_member(
 def create_class(
     name: str,
     trainer_id: int,
-    day_of_week: int,
-    start_time: time,
-    end_time: time,
     capacity: int,
+    schedules: list[tuple[int, time, time]],
 ) -> GymClass:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 f"""
-                INSERT INTO classes
-                    (name, trainer_id, day_of_week, start_time, end_time, capacity)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO classes (name, trainer_id, capacity)
+                VALUES (%s, %s, %s)
                 RETURNING {_CLASS_RETURNING}
                 """,
-                (name, trainer_id, day_of_week, start_time, end_time, capacity),
+                (name, trainer_id, capacity),
             )
             row = cur.fetchone()
             if not row:
                 raise RuntimeError("INSERT INTO classes no devolvió fila")
-    return _class_from_row(row)
+            class_id = row["id"]
+            _insert_schedules(cur, class_id, schedules)
+    return get_class(class_id)
 
 
 def get_trainer(trainer_id: int) -> Optional[Trainer]:
@@ -232,15 +302,14 @@ def list_classes_by_trainer(trainer_id: int) -> List[GymClass]:
             cur.execute(
                 f"""
                 SELECT {_CLASS_SELECT}
-                FROM classes c
-                JOIN trainers t ON t.id = c.trainer_id
+                {_CLASS_FROM}
                 WHERE c.trainer_id = %s
-                ORDER BY c.day_of_week, c.start_time
+                {_CLASS_ORDER}
                 """,
                 (trainer_id,),
             )
             rows = cur.fetchall()
-    return [_class_from_row(r) for r in rows]
+    return _attach_schedules([_class_from_row(r) for r in rows])
 
 
 def get_member(member_id: int) -> Optional[Member]:
@@ -321,14 +390,18 @@ def get_class(class_id: int) -> Optional[GymClass]:
             cur.execute(
                 f"""
                 SELECT {_CLASS_SELECT}
-                FROM classes c
-                JOIN trainers t ON t.id = c.trainer_id
+                {_CLASS_FROM}
                 WHERE c.id = %s
                 """,
                 (class_id,),
             )
             row = cur.fetchone()
-    return _class_from_row(row) if row else None
+    if not row:
+        return None
+    gym_class = _class_from_row(row)
+    schedules_by_id = _fetch_schedules_by_class_ids([class_id])
+    gym_class.schedules = schedules_by_id.get(class_id, [])
+    return gym_class
 
 
 def list_classes() -> List[GymClass]:
@@ -337,23 +410,20 @@ def list_classes() -> List[GymClass]:
             cur.execute(
                 f"""
                 SELECT {_CLASS_SELECT}
-                FROM classes c
-                JOIN trainers t ON t.id = c.trainer_id
-                ORDER BY c.day_of_week, c.start_time
+                {_CLASS_FROM}
+                {_CLASS_ORDER}
                 """
             )
             rows = cur.fetchall()
-    return [_class_from_row(r) for r in rows]
+    return _attach_schedules([_class_from_row(r) for r in rows])
 
 
 def update_class(
     class_id: int,
     name: str,
     trainer_id: int,
-    day_of_week: int,
-    start_time: time,
-    end_time: time,
     capacity: int,
+    schedules: list[tuple[int, time, time]],
 ) -> Optional[GymClass]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -362,25 +432,21 @@ def update_class(
                 UPDATE classes
                 SET name = %s,
                     trainer_id = %s,
-                    day_of_week = %s,
-                    start_time = %s,
-                    end_time = %s,
                     capacity = %s
                 WHERE id = %s
                 RETURNING {_CLASS_RETURNING}
                 """,
-                (
-                    name,
-                    trainer_id,
-                    day_of_week,
-                    start_time,
-                    end_time,
-                    capacity,
-                    class_id,
-                ),
+                (name, trainer_id, capacity, class_id),
             )
             row = cur.fetchone()
-    return _class_from_row(row) if row else None
+            if not row:
+                return None
+            cur.execute(
+                "DELETE FROM class_schedules WHERE class_id = %s",
+                (class_id,),
+            )
+            _insert_schedules(cur, class_id, schedules)
+    return get_class(class_id)
 
 
 def delete_class(class_id: int) -> bool:
@@ -464,16 +530,15 @@ def list_member_classes(member_id: int) -> List[GymClass]:
             cur.execute(
                 f"""
                 SELECT {_CLASS_SELECT}
-                FROM classes c
-                JOIN trainers t ON t.id = c.trainer_id
+                {_CLASS_FROM}
                 JOIN enrollments e ON e.class_id = c.id
                 WHERE e.member_id = %s
-                ORDER BY c.day_of_week, c.start_time
+                {_CLASS_ORDER}
                 """,
                 (member_id,),
             )
             rows = cur.fetchall()
-    return [_class_from_row(r) for r in rows]
+    return _attach_schedules([_class_from_row(r) for r in rows])
 
 
 def list_class_members(class_id: int) -> List[Member]:

@@ -2,7 +2,7 @@ from datetime import time
 
 import pytest
 
-from conftest import create_test_trainer
+from conftest import TRUNCATE_GYM_TABLES, create_test_trainer
 from db import init_schema, get_connection
 import service
 
@@ -12,9 +12,7 @@ def clean_db():
     init_schema()
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                "TRUNCATE attendance, enrollments, classes, members, trainers RESTART IDENTITY"
-            )
+            cur.execute(TRUNCATE_GYM_TABLES)
     yield
 
 
@@ -142,18 +140,14 @@ def test_list_classes_by_trainer():
     c1 = service.create_class(
         "Spinning",
         t1.id,
-        day_of_week=0,
-        start_time=time(9, 0),
-        end_time=time(10, 0),
-        capacity=10,
+        10,
+        [(0, time(9, 0), time(10, 0))],
     )
     service.create_class(
         "Yoga",
         t2.id,
-        day_of_week=1,
-        start_time=time(11, 0),
-        end_time=time(12, 0),
-        capacity=8,
+        8,
+        [(1, time(11, 0), time(12, 0))],
     )
     classes = service.list_classes_by_trainer(t1.id)
     assert len(classes) == 1
@@ -169,10 +163,8 @@ def test_delete_trainer_with_classes():
     service.create_class(
         "Spinning",
         trainer.id,
-        day_of_week=0,
-        start_time=time(9, 0),
-        end_time=time(10, 0),
-        capacity=10,
+        10,
+        [(0, time(9, 0), time(10, 0))],
     )
     with pytest.raises(service.BusinessError, match="clases asignadas"):
         service.delete_trainer(trainer.id)
