@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from datetime import datetime, time
+from datetime import date, datetime, time
+from decimal import Decimal
 
 
 @dataclass
@@ -40,6 +41,10 @@ class GymClass:
     capacity: int
     trainer_name: str = ""
     schedules: list[ClassSchedule] = field(default_factory=list)
+    start_date: date | None = None
+    end_date: date | None = None
+    price: Decimal = Decimal("0")
+    status: str = "scheduled"
 
 
 @dataclass

@@ -1,4 +1,5 @@
-from datetime import time
+from datetime import date, time
+from decimal import Decimal
 
 import pytest
 
@@ -22,6 +23,91 @@ def test_create_class():
     assert gym_class.name == "Spinning"
     assert gym_class.capacity == 10
     assert len(gym_class.schedules) == 1
+
+
+def test_create_class_defaults():
+    gym_class = create_test_class()
+    assert gym_class.price == Decimal("0.00")
+    assert gym_class.status == "scheduled"
+    assert gym_class.start_date is None
+    assert gym_class.end_date is None
+
+
+def test_create_class_with_new_fields():
+    trainer = create_test_trainer("Ana")
+    gym_class = service.create_class(
+        "Spinning",
+        trainer.id,
+        10,
+        [(0, time(9, 0), time(10, 0))],
+        start_date=date(2026, 1, 6),
+        end_date=date(2026, 3, 30),
+        price=Decimal("25.50"),
+        status="started",
+    )
+    assert gym_class.start_date == date(2026, 1, 6)
+    assert gym_class.end_date == date(2026, 3, 30)
+    assert gym_class.price == Decimal("25.50")
+    assert gym_class.status == "started"
+    fetched = service.get_class(gym_class.id)
+    assert fetched == gym_class
+
+
+def test_create_class_negative_price():
+    trainer = create_test_trainer("T")
+    with pytest.raises(service.BusinessError, match="precio no puede ser negativo"):
+        service.create_class(
+            "Yoga",
+            trainer.id,
+            10,
+            [(0, time(9, 0), time(10, 0))],
+            price=Decimal("-1"),
+        )
+
+
+def test_create_class_invalid_status():
+    trainer = create_test_trainer("T")
+    with pytest.raises(service.BusinessError, match="estado debe ser"):
+        service.create_class(
+            "Yoga",
+            trainer.id,
+            10,
+            [(0, time(9, 0), time(10, 0))],
+            status="closed",
+        )
+
+
+def test_create_class_end_before_start():
+    trainer = create_test_trainer("T")
+    with pytest.raises(service.BusinessError, match="fecha de fin"):
+        service.create_class(
+            "Yoga",
+            trainer.id,
+            10,
+            [(0, time(9, 0), time(10, 0))],
+            start_date=date(2026, 5, 1),
+            end_date=date(2026, 4, 1),
+        )
+
+
+def test_update_class_new_fields():
+    gym_class = create_test_class()
+    trainer = service.get_trainer(gym_class.trainer_id)
+    updated = service.update_class(
+        gym_class.id,
+        gym_class.name,
+        trainer.id,
+        gym_class.capacity,
+        [(0, time(9, 0), time(10, 0))],
+        start_date=date(2026, 2, 1),
+        end_date=date(2026, 2, 28),
+        price=Decimal("19.99"),
+        status="ended",
+    )
+    assert updated.start_date == date(2026, 2, 1)
+    assert updated.end_date == date(2026, 2, 28)
+    assert updated.price == Decimal("19.99")
+    assert updated.status == "ended"
 
 
 def test_create_class_multi_schedule():
