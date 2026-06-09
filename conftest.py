@@ -2,6 +2,7 @@
 import itertools
 import sys
 from datetime import time
+from decimal import Decimal
 from pathlib import Path
 
 import service
@@ -67,9 +68,22 @@ def create_test_class(
     trainer=None,
     capacity=10,
     schedules=None,
+    start_date=None,
+    end_date=None,
+    price=Decimal("0"),
+    status="scheduled",
 ):
     if trainer is None:
         trainer = create_test_trainer("T")
     if schedules is None:
         schedules = [(0, time(9, 0), time(10, 0))]
-    return service.create_class(name, trainer.id, capacity, schedules)
+    return service.create_class(
+        name,
+        trainer.id,
+        capacity,
+        schedules,
+        start_date=start_date,
+        end_date=end_date,
+        price=price,
+        status=status,
+    )

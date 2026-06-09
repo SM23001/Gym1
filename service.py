@@ -1,4 +1,5 @@
-from datetime import time
+from datetime import date, time
+from decimal import Decimal, InvalidOperation
 
 from models import GymClass, ClassSchedule, Enrollment, Attendance
 import repository as repo
@@ -17,6 +18,8 @@ DAY_NAMES = (
     "Saturday",
     "Sunday",
 )
+
+CLASS_STATUSES = ("scheduled", "started", "ended")
 
 ScheduleSlot = tuple[int, time, time]
 
@@ -253,12 +256,47 @@ def _validate_schedules(schedules: list[ScheduleSlot]) -> None:
                 )
 
 
+def _validate_price(price) -> Decimal:
+    try:
+        price = Decimal(str(price))
+    except (InvalidOperation, ValueError, TypeError):
+        raise BusinessError("El precio no es válido")
+    if price < 0:
+        raise BusinessError("El precio no puede ser negativo")
+    return price.quantize(Decimal("0.01"))
+
+
+def _validate_status(status: str) -> str:
+    status = (status or "").strip().lower()
+    if status not in CLASS_STATUSES:
+        raise BusinessError(
+            "El estado debe ser scheduled, started o ended"
+        )
+    return status
+
+
+def _validate_class_dates(
+    start_date: date | None,
+    end_date: date | None,
+) -> tuple[date | None, date | None]:
+    if start_date and end_date and end_date < start_date:
+        raise BusinessError(
+            "La fecha de fin no puede ser anterior a la de inicio"
+        )
+    return start_date, end_date
+
+
 def _validate_class_fields(
     name: str,
     trainer_id: int,
     capacity: int,
     schedules: list[ScheduleSlot],
-) -> str:
+    *,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    price=Decimal("0"),
+    status: str = "scheduled",
+) -> tuple[str, date | None, date | None, Decimal, str]:
     name = name.strip()
     if not name:
         raise BusinessError("El nombre no puede estar vacío")
@@ -267,7 +305,10 @@ def _validate_class_fields(
     if capacity <= 0:
         raise BusinessError("El cupo debe ser mayor que cero")
     _validate_schedules(schedules)
-    return name
+    start_date, end_date = _validate_class_dates(start_date, end_date)
+    price = _validate_price(price)
+    status = _validate_status(status)
+    return name, start_date, end_date, price, status
 
 
 def create_class(
@@ -275,13 +316,31 @@ def create_class(
     trainer_id: int,
     capacity: int,
     schedules: list[ScheduleSlot],
+    *,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    price=Decimal("0"),
+    status: str = "scheduled",
 ) -> GymClass:
-    name = _validate_class_fields(name, trainer_id, capacity, schedules)
+    name, start_date, end_date, price, status = _validate_class_fields(
+        name,
+        trainer_id,
+        capacity,
+        schedules,
+        start_date=start_date,
+        end_date=end_date,
+        price=price,
+        status=status,
+    )
     return repo.create_class(
         name=name,
         trainer_id=trainer_id,
         capacity=capacity,
         schedules=schedules,
+        start_date=start_date,
+        end_date=end_date,
+        price=price,
+        status=status,
     )
 
 
@@ -295,10 +354,24 @@ def update_class(
     trainer_id: int,
     capacity: int,
     schedules: list[ScheduleSlot],
+    *,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    price=Decimal("0"),
+    status: str = "scheduled",
 ) -> GymClass:
     if repo.get_class(class_id) is None:
         raise BusinessError("Clase no existe")
-    name = _validate_class_fields(name, trainer_id, capacity, schedules)
+    name, start_date, end_date, price, status = _validate_class_fields(
+        name,
+        trainer_id,
+        capacity,
+        schedules,
+        start_date=start_date,
+        end_date=end_date,
+        price=price,
+        status=status,
+    )
     enrolled = repo.count_enrollments(class_id)
     if capacity < enrolled:
         raise BusinessError(
@@ -310,6 +383,10 @@ def update_class(
         trainer_id=trainer_id,
         capacity=capacity,
         schedules=schedules,
+        start_date=start_date,
+        end_date=end_date,
+        price=price,
+        status=status,
     )
     if gym_class is None:
         raise BusinessError("Clase no existe")
@@ -491,12 +568,30 @@ def format_class_schedules(gym_class: GymClass) -> str:
     return ", ".join(parts)
 
 
+def format_class_price(gym_class: GymClass) -> str:
+    return f"${gym_class.price:.2f}"
+
+
+def format_class_date(value: date | None) -> str:
+    return value.strftime("%Y-%m-%d") if value else "-"
+
+
+def format_class_period(gym_class: GymClass) -> str:
+    return (
+        f"{format_class_date(gym_class.start_date)} → "
+        f"{format_class_date(gym_class.end_date)}"
+    )
+
+
 def format_class(gym_class: GymClass) -> str:
     trainer_label = gym_class.trainer_name or str(gym_class.trainer_id)
     return (
         f"[{gym_class.id}] {gym_class.name} - Entrenador {trainer_label} - "
         f"Horario: {format_class_schedules(gym_class)} "
-        f"Cupo: {gym_class.capacity}"
+        f"Cupo: {gym_class.capacity} - "
+        f"Precio: {format_class_price(gym_class)} - "
+        f"Estado: {gym_class.status} - "
+        f"Periodo: {format_class_period(gym_class)}"
     )
 
 

@@ -1,7 +1,8 @@
 """Load demo data into the gym database via the service layer."""
 import argparse
 import sys
-from datetime import time
+from datetime import date, time
+from decimal import Decimal
 
 from config import get_settings
 from db import get_connection, init_schema
@@ -67,6 +68,10 @@ def seed_data() -> None:
         ana.id,
         10,
         [(0, time(9, 0), time(10, 0))],
+        start_date=date(2026, 1, 6),
+        end_date=date(2026, 3, 30),
+        price=Decimal("25.00"),
+        status="started",
     )
     fitness = service.create_class(
         "Fitness",
@@ -74,6 +79,9 @@ def seed_data() -> None:
         20,
         [(day, time(19, 0), time(20, 0)) for day in range(5)]
         + [(5, time(6, 0), time(7, 0)), (6, time(6, 0), time(7, 0))],
+        start_date=date(2026, 2, 2),
+        price=Decimal("30.00"),
+        status="scheduled",
     )
     yoga = service.create_class(
         "Yoga",
@@ -83,12 +91,20 @@ def seed_data() -> None:
             (0, time(18, 0), time(19, 0)),
             (4, time(18, 0), time(19, 0)),
         ],
+        start_date=date(2026, 1, 5),
+        end_date=date(2026, 6, 30),
+        price=Decimal("20.00"),
+        status="started",
     )
     crossfit = service.create_class(
         "CrossFit",
         laura.id,
         12,
         [(2, time(7, 0), time(8, 0))],
+        start_date=date(2025, 9, 1),
+        end_date=date(2025, 12, 15),
+        price=Decimal("35.50"),
+        status="ended",
     )
 
     service.enroll_member(spinning.id, juan.id)

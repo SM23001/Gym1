@@ -1,4 +1,5 @@
-from datetime import datetime, time
+from datetime import date, datetime, time
+from decimal import Decimal, InvalidOperation
 
 import psycopg2
 
@@ -30,8 +31,15 @@ DAY_NAMES = (
 )
 
 
+CLASS_STATUS_OPTIONS = service.CLASS_STATUSES
+
+
 def parse_time(hhmm: str) -> time:
     return datetime.strptime(hhmm.strip(), "%H:%M").time()
+
+
+def parse_date(value: str) -> date:
+    return datetime.strptime(value.strip(), "%Y-%m-%d").date()
 
 
 def prompt_text(label: str, *, required: bool = True) -> str:
@@ -73,6 +81,44 @@ def prompt_time(label: str) -> time:
             print_error("Invalid format. Use HH:MM, e.g. 09:30.")
 
 
+def prompt_optional_date(label: str, *, required: bool = False) -> date | None:
+    hint = c(" [YYYY-MM-DD, Enter = skip]", CYAN)
+    while True:
+        raw = input(c(f"  {label}{hint}: ", CYAN)).strip()
+        if not raw:
+            if required:
+                print_error("This field is required.")
+                continue
+            return None
+        try:
+            return parse_date(raw)
+        except ValueError:
+            print_error("Invalid format. Use YYYY-MM-DD, e.g. 2026-06-01.")
+
+
+def prompt_decimal(label: str, *, min_value: Decimal | None = None) -> Decimal:
+    while True:
+        raw = input(c(f"  {label}: ", CYAN)).strip()
+        try:
+            value = Decimal(raw)
+        except InvalidOperation:
+            print_error("Enter a valid amount, e.g. 19.99.")
+            continue
+        if min_value is not None and value < min_value:
+            print_error(f"Minimum value is {min_value}.")
+            continue
+        return value
+
+
+def prompt_status(label: str) -> str:
+    options = " / ".join(CLASS_STATUS_OPTIONS)
+    while True:
+        raw = input(c(f"  {label} ({options}): ", CYAN)).strip().lower()
+        if raw in CLASS_STATUS_OPTIONS:
+            return raw
+        print_error(f"Choose one of: {options}.")
+
+
 def prompt_optional_text(label: str, current: str) -> str:
     hint = c(f" [Enter = '{current}']", CYAN)
     value = input(c(f"  {label}{hint}: ", CYAN)).strip()
@@ -103,6 +149,47 @@ def prompt_optional_time(label: str, current: time) -> time:
     if not raw:
         return current
     return parse_time(raw)
+
+
+def prompt_optional_class_date(label: str, current: date | None) -> date | None:
+    shown = current.strftime("%Y-%m-%d") if current else "skip"
+    hint = c(f" [YYYY-MM-DD, Enter = {shown}, '-' = clear]", CYAN)
+    raw = input(c(f"  {label}{hint}: ", CYAN)).strip()
+    if not raw:
+        return current
+    if raw == "-":
+        return None
+    try:
+        return parse_date(raw)
+    except ValueError:
+        raise ValueError(f"{label}: use YYYY-MM-DD")
+
+
+def prompt_optional_decimal(
+    label: str, current: Decimal, *, min_value: Decimal | None = None
+) -> Decimal:
+    hint = c(f" [Enter = {current}]", CYAN)
+    raw = input(c(f"  {label}{hint}: ", CYAN)).strip()
+    if not raw:
+        return current
+    try:
+        value = Decimal(raw)
+    except InvalidOperation:
+        raise ValueError(f"{label}: expected a number")
+    if min_value is not None and value < min_value:
+        raise ValueError(f"{label}: minimum value is {min_value}")
+    return value
+
+
+def prompt_optional_status(label: str, current: str) -> str:
+    options = " / ".join(CLASS_STATUS_OPTIONS)
+    hint = c(f" [{options}, Enter = {current}]", CYAN)
+    raw = input(c(f"  {label}{hint}: ", CYAN)).strip().lower()
+    if not raw:
+        return current
+    if raw not in CLASS_STATUS_OPTIONS:
+        raise ValueError(f"{label}: choose one of {options}")
+    return raw
 
 
 def show_trainers() -> None:
@@ -162,23 +249,41 @@ def show_member_profile(member) -> None:
     print(f"  Notes:     {notes}")
 
 
+CLASS_TABLE_HEADERS = [
+    "ID",
+    "Name",
+    "Trainer",
+    "Schedule",
+    "Capacity",
+    "Price",
+    "Status",
+    "Start",
+    "End",
+]
+
+
+def class_table_row(gym_class) -> list[str]:
+    return [
+        str(gym_class.id),
+        gym_class.name,
+        gym_class.trainer_name,
+        format_class_schedule_cell(gym_class),
+        str(gym_class.capacity),
+        service.format_class_price(gym_class),
+        gym_class.status,
+        service.format_class_date(gym_class.start_date),
+        service.format_class_date(gym_class.end_date),
+    ]
+
+
 def show_classes() -> None:
     classes = service.list_classes()
     if not classes:
         print_empty("(no classes registered)")
         return
     print_table(
-        ["ID", "Name", "Trainer", "Schedule", "Capacity"],
-        [
-            [
-                str(gym_class.id),
-                gym_class.name,
-                gym_class.trainer_name,
-                format_class_schedule_cell(gym_class),
-                str(gym_class.capacity),
-            ]
-            for gym_class in classes
-        ],
+        CLASS_TABLE_HEADERS,
+        [class_table_row(gym_class) for gym_class in classes],
     )
 
 
@@ -187,17 +292,8 @@ def show_class_rows(classes, *, empty_message: str = "(no classes)") -> None:
         print_empty(empty_message)
         return
     print_table(
-        ["ID", "Name", "Trainer", "Schedule", "Capacity"],
-        [
-            [
-                str(gym_class.id),
-                gym_class.name,
-                gym_class.trainer_name,
-                format_class_schedule_cell(gym_class),
-                str(gym_class.capacity),
-            ]
-            for gym_class in classes
-        ],
+        CLASS_TABLE_HEADERS,
+        [class_table_row(gym_class) for gym_class in classes],
     )
 
 
@@ -276,8 +372,21 @@ def prompt_class_fields(*, existing=None):
         show_trainers()
         trainer_id = prompt_int("Trainer id", min_value=1)
         capacity = prompt_int("Max capacity", min_value=1)
+        price = prompt_decimal("Price ($)", min_value=Decimal("0"))
+        status = prompt_status("Status")
+        start_date = prompt_optional_date("Start date")
+        end_date = prompt_optional_date("End date")
         schedules = prompt_schedules()
-        return name, trainer_id, capacity, schedules
+        return {
+            "name": name,
+            "trainer_id": trainer_id,
+            "capacity": capacity,
+            "schedules": schedules,
+            "start_date": start_date,
+            "end_date": end_date,
+            "price": price,
+            "status": status,
+        }
 
     name = prompt_optional_text("Class name", existing.name)
     print(c("  Available trainers:", YELLOW))
@@ -286,8 +395,23 @@ def prompt_class_fields(*, existing=None):
         "Trainer id", existing.trainer_id, min_value=1
     )
     capacity = prompt_optional_int("Max capacity", existing.capacity, min_value=1)
+    price = prompt_optional_decimal(
+        "Price ($)", existing.price, min_value=Decimal("0")
+    )
+    status = prompt_optional_status("Status", existing.status)
+    start_date = prompt_optional_class_date("Start date", existing.start_date)
+    end_date = prompt_optional_class_date("End date", existing.end_date)
     schedules = prompt_schedules(existing=existing)
-    return name, trainer_id, capacity, schedules
+    return {
+        "name": name,
+        "trainer_id": trainer_id,
+        "capacity": capacity,
+        "schedules": schedules,
+        "start_date": start_date,
+        "end_date": end_date,
+        "price": price,
+        "status": status,
+    }
 
 
 def prompt_optional_years_experience(
@@ -607,7 +731,7 @@ def run_class_menu() -> None:
         try:
             if option == "1":
                 fields = prompt_class_fields()
-                gym_class = service.create_class(*fields)
+                gym_class = service.create_class(**fields)
                 print_success(f"Class created with id {gym_class.id}")
                 pause()
 
@@ -633,7 +757,7 @@ def run_class_menu() -> None:
                     pause()
                     continue
                 fields = prompt_class_fields(existing=existing)
-                gym_class = service.update_class(class_id, *fields)
+                gym_class = service.update_class(class_id, **fields)
                 print_success(f"Class updated: {service.format_class(gym_class)}")
                 pause()
 

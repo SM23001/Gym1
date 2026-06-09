@@ -45,7 +45,16 @@ def init_schema() -> None:
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
         trainer_id INTEGER NOT NULL REFERENCES trainers(id) ON DELETE RESTRICT,
-        capacity INTEGER NOT NULL
+        capacity INTEGER NOT NULL,
+        start_date DATE,
+        end_date DATE,
+        price NUMERIC(10, 2) NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'scheduled',
+        CONSTRAINT classes_price_check CHECK (price >= 0),
+        CONSTRAINT classes_status_check
+            CHECK (status IN ('scheduled', 'started', 'ended')),
+        CONSTRAINT classes_dates_check
+            CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date)
     );
 
     CREATE TABLE IF NOT EXISTS class_schedules (
@@ -119,6 +128,35 @@ def init_schema() -> None:
     WHERE notes IS NULL;
 
     CREATE UNIQUE INDEX IF NOT EXISTS members_email_unique ON members (email);
+
+    ALTER TABLE classes ADD COLUMN IF NOT EXISTS start_date DATE;
+    ALTER TABLE classes ADD COLUMN IF NOT EXISTS end_date DATE;
+    ALTER TABLE classes ADD COLUMN IF NOT EXISTS price NUMERIC(10, 2) NOT NULL DEFAULT 0;
+    ALTER TABLE classes ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'scheduled';
+
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = 'classes_price_check'
+        ) THEN
+            ALTER TABLE classes
+                ADD CONSTRAINT classes_price_check CHECK (price >= 0);
+        END IF;
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = 'classes_status_check'
+        ) THEN
+            ALTER TABLE classes
+                ADD CONSTRAINT classes_status_check
+                CHECK (status IN ('scheduled', 'started', 'ended'));
+        END IF;
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = 'classes_dates_check'
+        ) THEN
+            ALTER TABLE classes
+                ADD CONSTRAINT classes_dates_check
+                CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date);
+        END IF;
+    END $$;
 
     DO $$
     BEGIN

@@ -1,4 +1,5 @@
-from datetime import time
+from datetime import date, time
+from decimal import Decimal
 from typing import List, Optional
 
 from psycopg2.extras import RealDictCursor
@@ -16,11 +17,13 @@ _MEMBER_COLUMNS = (
 
 _CLASS_SELECT = """
     c.id, c.name, c.trainer_id, c.capacity,
+    c.start_date, c.end_date, c.price, c.status,
     t.name AS trainer_name
 """
 
 _CLASS_RETURNING = """
     id, name, trainer_id, capacity,
+    start_date, end_date, price, status,
     (SELECT name FROM trainers WHERE id = trainer_id) AS trainer_name
 """
 
@@ -56,6 +59,7 @@ def _schedule_from_row(row) -> ClassSchedule:
 
 
 def _class_from_row(row, schedules: list[ClassSchedule] | None = None) -> GymClass:
+    price = row.get("price")
     return GymClass(
         id=row["id"],
         name=row["name"],
@@ -63,6 +67,10 @@ def _class_from_row(row, schedules: list[ClassSchedule] | None = None) -> GymCla
         capacity=row["capacity"],
         trainer_name=row.get("trainer_name") or "",
         schedules=schedules or [],
+        start_date=row.get("start_date"),
+        end_date=row.get("end_date"),
+        price=price if price is not None else Decimal("0"),
+        status=row.get("status") or "scheduled",
     )
 
 
@@ -184,16 +192,22 @@ def create_class(
     trainer_id: int,
     capacity: int,
     schedules: list[tuple[int, time, time]],
+    *,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    price: Decimal = Decimal("0"),
+    status: str = "scheduled",
 ) -> GymClass:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 f"""
-                INSERT INTO classes (name, trainer_id, capacity)
-                VALUES (%s, %s, %s)
+                INSERT INTO classes
+                    (name, trainer_id, capacity, start_date, end_date, price, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING {_CLASS_RETURNING}
                 """,
-                (name, trainer_id, capacity),
+                (name, trainer_id, capacity, start_date, end_date, price, status),
             )
             row = cur.fetchone()
             if not row:
@@ -424,6 +438,11 @@ def update_class(
     trainer_id: int,
     capacity: int,
     schedules: list[tuple[int, time, time]],
+    *,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    price: Decimal = Decimal("0"),
+    status: str = "scheduled",
 ) -> Optional[GymClass]:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -432,11 +451,24 @@ def update_class(
                 UPDATE classes
                 SET name = %s,
                     trainer_id = %s,
-                    capacity = %s
+                    capacity = %s,
+                    start_date = %s,
+                    end_date = %s,
+                    price = %s,
+                    status = %s
                 WHERE id = %s
                 RETURNING {_CLASS_RETURNING}
                 """,
-                (name, trainer_id, capacity, class_id),
+                (
+                    name,
+                    trainer_id,
+                    capacity,
+                    start_date,
+                    end_date,
+                    price,
+                    status,
+                    class_id,
+                ),
             )
             row = cur.fetchone()
             if not row:
