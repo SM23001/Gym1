@@ -45,10 +45,17 @@ def init_schema() -> None:
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
         trainer_id INTEGER NOT NULL REFERENCES trainers(id) ON DELETE RESTRICT,
-        day_of_week INTEGER NOT NULL,
+        capacity INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS class_schedules (
+        id SERIAL PRIMARY KEY,
+        class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+        day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
         start_time TIME NOT NULL,
         end_time TIME NOT NULL,
-        capacity INTEGER NOT NULL
+        CHECK (end_time > start_time),
+        UNIQUE (class_id, day_of_week, start_time, end_time)
     );
 
     CREATE TABLE IF NOT EXISTS enrollments (
@@ -112,6 +119,24 @@ def init_schema() -> None:
     WHERE notes IS NULL;
 
     CREATE UNIQUE INDEX IF NOT EXISTS members_email_unique ON members (email);
+
+    DO $$
+    BEGIN
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'classes'
+              AND column_name = 'day_of_week'
+        ) THEN
+            INSERT INTO class_schedules (class_id, day_of_week, start_time, end_time)
+            SELECT id, day_of_week, start_time, end_time FROM classes
+            ON CONFLICT DO NOTHING;
+
+            ALTER TABLE classes DROP COLUMN day_of_week;
+            ALTER TABLE classes DROP COLUMN start_time;
+            ALTER TABLE classes DROP COLUMN end_time;
+        END IF;
+    END $$;
     """
 
     with get_connection() as conn:

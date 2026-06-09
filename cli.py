@@ -174,11 +174,7 @@ def show_classes() -> None:
                 str(gym_class.id),
                 gym_class.name,
                 gym_class.trainer_name,
-                (
-                    f"{DAY_NAMES[gym_class.day_of_week]} "
-                    f"{gym_class.start_time.strftime('%H:%M')}-"
-                    f"{gym_class.end_time.strftime('%H:%M')}"
-                ),
+                format_class_schedule_cell(gym_class),
                 str(gym_class.capacity),
             ]
             for gym_class in classes
@@ -197,11 +193,7 @@ def show_class_rows(classes, *, empty_message: str = "(no classes)") -> None:
                 str(gym_class.id),
                 gym_class.name,
                 gym_class.trainer_name,
-                (
-                    f"{DAY_NAMES[gym_class.day_of_week]} "
-                    f"{gym_class.start_time.strftime('%H:%M')}-"
-                    f"{gym_class.end_time.strftime('%H:%M')}"
-                ),
+                format_class_schedule_cell(gym_class),
                 str(gym_class.capacity),
             ]
             for gym_class in classes
@@ -227,20 +219,65 @@ def show_member_rows(members, *, empty_message: str = "(no members)") -> None:
     )
 
 
+def format_class_schedule_cell(gym_class) -> str:
+    return service.format_class_schedules(gym_class)
+
+
+def prompt_schedules(*, existing=None):
+    if existing is not None and existing.schedules:
+        print(c("  Current schedule:", CYAN))
+        for schedule in sorted(
+            existing.schedules, key=lambda s: (s.day_of_week, s.start_time)
+        ):
+            print(
+                f"    {DAY_NAMES[schedule.day_of_week]} "
+                f"{schedule.start_time.strftime('%H:%M')}-"
+                f"{schedule.end_time.strftime('%H:%M')}"
+            )
+        print(c("  Enter a new schedule (replaces all slots).", YELLOW))
+
+    schedules = []
+    print(c("  Schedule slots (at least one required)", CYAN))
+    while True:
+        print(c("  1 = Add one day  2 = Add Mon–Fri  3 = Finish", CYAN))
+        choice = input(c("  Option: ", CYAN)).strip()
+        if choice == "3":
+            if schedules:
+                return schedules
+            print_error("Add at least one schedule slot.")
+            continue
+        if choice == "1":
+            print(c("  Days: 0=Monday … 6=Sunday", CYAN))
+            day = prompt_int("Day of week", min_value=0, max_value=6)
+            start = prompt_time("Start time")
+            end = prompt_time("End time")
+            schedules.append((day, start, end))
+            print_success(
+                f"Added {DAY_NAMES[day]} "
+                f"{start.strftime('%H:%M')}-{end.strftime('%H:%M')}"
+            )
+            continue
+        if choice == "2":
+            start = prompt_time("Start time")
+            end = prompt_time("End time")
+            for day in range(5):
+                schedules.append((day, start, end))
+            print_success(
+                f"Added Mon–Fri {start.strftime('%H:%M')}-{end.strftime('%H:%M')}"
+            )
+            continue
+        print_error("Invalid option. Enter 1, 2, or 3.")
+
+
 def prompt_class_fields(*, existing=None):
     if existing is None:
         name = prompt_text("Class name")
         print(c("  Available trainers:", YELLOW))
         show_trainers()
         trainer_id = prompt_int("Trainer id", min_value=1)
-        print(c("  Days: 0=Monday … 6=Sunday", CYAN))
-        for i, day_name in enumerate(DAY_NAMES):
-            print(f"    {i} = {day_name}")
-        day = prompt_int("Day of week", min_value=0, max_value=6)
-        start = prompt_time("Start time")
-        end = prompt_time("End time")
         capacity = prompt_int("Max capacity", min_value=1)
-        return name, trainer_id, day, start, end, capacity
+        schedules = prompt_schedules()
+        return name, trainer_id, capacity, schedules
 
     name = prompt_optional_text("Class name", existing.name)
     print(c("  Available trainers:", YELLOW))
@@ -248,16 +285,9 @@ def prompt_class_fields(*, existing=None):
     trainer_id = prompt_optional_int(
         "Trainer id", existing.trainer_id, min_value=1
     )
-    print(c("  Days: 0=Monday … 6=Sunday", CYAN))
-    for i, day_name in enumerate(DAY_NAMES):
-        print(f"    {i} = {day_name}")
-    day = prompt_optional_int(
-        "Day of week", existing.day_of_week, min_value=0, max_value=6
-    )
-    start = prompt_optional_time("Start time", existing.start_time)
-    end = prompt_optional_time("End time", existing.end_time)
     capacity = prompt_optional_int("Max capacity", existing.capacity, min_value=1)
-    return name, trainer_id, day, start, end, capacity
+    schedules = prompt_schedules(existing=existing)
+    return name, trainer_id, capacity, schedules
 
 
 def prompt_optional_years_experience(

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, time
 
 
@@ -24,15 +24,22 @@ class Member:
 
 
 @dataclass
+class ClassSchedule:
+    id: int
+    class_id: int
+    day_of_week: int
+    start_time: time
+    end_time: time
+
+
+@dataclass
 class GymClass:
     id: int
     name: str
     trainer_id: int
-    day_of_week: int
-    start_time: time
-    end_time: time
     capacity: int
     trainer_name: str = ""
+    schedules: list[ClassSchedule] = field(default_factory=list)
 
 
 @dataclass
@@ -50,4 +57,3 @@ class Attendance:
     attended_at: datetime
     class_name: str
     member_name: str
-

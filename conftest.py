@@ -1,6 +1,7 @@
 """Pytest configuration: ensure project root is on sys.path for imports like 'db', 'service'."""
 import itertools
 import sys
+from datetime import time
 from pathlib import Path
 
 import service
@@ -11,6 +12,11 @@ if str(root) not in sys.path:
 
 _trainer_counter = itertools.count(1)
 _member_counter = itertools.count(1)
+
+TRUNCATE_GYM_TABLES = (
+    "TRUNCATE attendance, enrollments, class_schedules, classes, "
+    "members, trainers RESTART IDENTITY CASCADE"
+)
 
 
 def create_test_trainer(
@@ -53,3 +59,17 @@ def create_test_member(
         membership_plan,
         notes=notes,
     )
+
+
+def create_test_class(
+    name="Spinning",
+    *,
+    trainer=None,
+    capacity=10,
+    schedules=None,
+):
+    if trainer is None:
+        trainer = create_test_trainer("T")
+    if schedules is None:
+        schedules = [(0, time(9, 0), time(10, 0))]
+    return service.create_class(name, trainer.id, capacity, schedules)
