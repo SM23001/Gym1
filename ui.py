@@ -68,6 +68,17 @@ ENROLLMENT_BANNER = r"""
   ╚═══════════════════════════════════════╝
 """
 
+ATTENDANCE_BANNER = r"""
+  ╔═══════════════════════════════════════╗
+  ║                                       ║
+  ║    O/  ✓ ─────────  ATTENDANCE        ║
+  ║   /|   ✓ ─────────  Mark present      ║
+  ║    |   ✗ ─────────  Track your class  ║
+  ║   / \                                 ║
+  ║                                       ║
+  ╚═══════════════════════════════════════╝
+"""
+
 
 def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
@@ -96,6 +107,11 @@ def print_class_banner() -> None:
 
 def print_enrollment_banner() -> None:
     print(c(ENROLLMENT_BANNER, BOLD + BRIGHT_CYAN))
+    print()
+
+
+def print_attendance_banner() -> None:
+    print(c(ATTENDANCE_BANNER, BOLD + BRIGHT_CYAN))
     print()
 
 
