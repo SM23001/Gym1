@@ -24,6 +24,29 @@ BANNER = r"""
   ╚═══════════════════════════════════════╝
 """
 
+TRAINER_BANNER = r"""
+  ╔═══════════════════════════════════════╗
+  ║                                       ║
+  ║      ___                              ║
+  ║     /   \    TRAINERS                 ║
+  ║    |  O  |   Coach · Guide · Mentor   ║
+  ║     \___/                             ║
+  ║      | |                              ║
+  ║     /   \                             ║
+  ║                                       ║
+  ╚═══════════════════════════════════════╝
+"""
+
+MEMBER_BANNER = r"""
+  ╔═══════════════════════════════════════╗
+  ║                                       ║
+  ║     O   O   O    MEMBERS              ║
+  ║    /|\ /|\ /|\   Gym community        ║
+  ║     |   |   |                         ║
+  ║                                       ║
+  ╚═══════════════════════════════════════╝
+"""
+
 
 def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
@@ -32,6 +55,16 @@ def clear_screen() -> None:
 def print_banner() -> None:
     print(c(BANNER, BOLD + BRIGHT_CYAN))
     print(c("  Trainers · Members · Classes · Attendance", YELLOW))
+    print()
+
+
+def print_trainer_banner() -> None:
+    print(c(TRAINER_BANNER, BOLD + BRIGHT_CYAN))
+    print()
+
+
+def print_member_banner() -> None:
+    print(c(MEMBER_BANNER, BOLD + BRIGHT_CYAN))
     print()
 
 

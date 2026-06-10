@@ -10,6 +10,8 @@ from ui import (
     clear_screen,
     pause,
     print_banner,
+    print_trainer_banner,
+    print_member_banner,
     print_empty,
     print_error,
     print_header,
@@ -500,7 +502,7 @@ def run_trainer_menu() -> None:
     ]
     while True:
         clear_screen()
-        print_header("Trainers")
+        print_trainer_banner()
         print_menu(options)
         option = prompt_option()
 
@@ -614,7 +616,7 @@ def run_member_menu() -> None:
     ]
     while True:
         clear_screen()
-        print_header("Members")
+        print_member_banner()
         print_menu(options)
         option = prompt_option()
 
