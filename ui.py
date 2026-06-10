@@ -47,10 +47,16 @@ def print_header(title: str) -> None:
 
 
 def print_menu(options: list[tuple[str, str]]) -> None:
-    print(c("  ┌─ Options ─────────────────────", CYAN))
-    for key, label in options:
-        print(c(f"  │  [{key}]", YELLOW), f" {label}")
-    print(c("  └───────────────────────────────", CYAN))
+    sep = c(" · ", CYAN)
+    items = [f"{c(f'[{key}]', YELLOW)} {label}" for key, label in options]
+    menu_line = sep.join(items)
+    plain_width = sum(len(f"[{key}] {label}") for key, label in options) + 3 * (
+        len(options) - 1
+    )
+    width = max(plain_width + 6, 44)
+    print(c(f"  ┌─ Options {'─' * max(width - 13, 1)}", CYAN))
+    print(f"  │  {menu_line}")
+    print(c(f"  └{'─' * (width - 4)}", CYAN))
 
 
 def print_section(title: str) -> None:
