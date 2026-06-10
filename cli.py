@@ -14,6 +14,7 @@ from ui import (
     print_member_banner,
     print_class_banner,
     print_enrollment_banner,
+    print_attendance_banner,
     print_empty,
     print_error,
     print_header,
@@ -946,7 +947,7 @@ def run_attendance_menu() -> None:
     ]
     while True:
         clear_screen()
-        print_header("Attendance")
+        print_attendance_banner()
         print_menu(options)
         option = prompt_option()
 
