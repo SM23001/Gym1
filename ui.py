@@ -58,6 +58,16 @@ CLASS_BANNER = r"""
   ╚═══════════════════════════════════════╝
 """
 
+ENROLLMENT_BANNER = r"""
+  ╔═══════════════════════════════════════╗
+  ║                                       ║
+  ║   O  O  O  ──►  O   ENROLLMENT       ║
+  ║  /|\/|\/|\      |   Join the class    ║
+  ║   |  |  |      / \                   ║
+  ║                                       ║
+  ╚═══════════════════════════════════════╝
+"""
+
 
 def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
@@ -81,6 +91,11 @@ def print_member_banner() -> None:
 
 def print_class_banner() -> None:
     print(c(CLASS_BANNER, BOLD + BRIGHT_CYAN))
+    print()
+
+
+def print_enrollment_banner() -> None:
+    print(c(ENROLLMENT_BANNER, BOLD + BRIGHT_CYAN))
     print()
 
 

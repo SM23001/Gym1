@@ -13,6 +13,7 @@ from ui import (
     print_trainer_banner,
     print_member_banner,
     print_class_banner,
+    print_enrollment_banner,
     print_empty,
     print_error,
     print_header,
@@ -813,7 +814,7 @@ def run_enrollment_menu() -> None:
     ]
     while True:
         clear_screen()
-        print_header("Enrollment")
+        print_enrollment_banner()
         print_menu(options)
         option = prompt_option()
 
