@@ -47,6 +47,17 @@ MEMBER_BANNER = r"""
   ╚═══════════════════════════════════════╝
 """
 
+CLASS_BANNER = r"""
+  ╔═══════════════════════════════════════╗
+  ║                                       ║
+  ║       O      CLASSES                  ║
+  ║      /|─     Balance · Flex · Zen     ║
+  ║       |                               ║
+  ║      / \                              ║
+  ║                                       ║
+  ╚═══════════════════════════════════════╝
+"""
+
 
 def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
@@ -65,6 +76,11 @@ def print_trainer_banner() -> None:
 
 def print_member_banner() -> None:
     print(c(MEMBER_BANNER, BOLD + BRIGHT_CYAN))
+    print()
+
+
+def print_class_banner() -> None:
+    print(c(CLASS_BANNER, BOLD + BRIGHT_CYAN))
     print()
 
 
