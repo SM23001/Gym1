@@ -12,6 +12,7 @@ from ui import (
     print_banner,
     print_trainer_banner,
     print_member_banner,
+    print_class_banner,
     print_empty,
     print_error,
     print_header,
@@ -726,7 +727,7 @@ def run_class_menu() -> None:
     ]
     while True:
         clear_screen()
-        print_header("Classes")
+        print_class_banner()
         print_menu(options)
         option = prompt_option()
 
