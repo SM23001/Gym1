@@ -5,7 +5,7 @@ from typing import List, Optional
 from psycopg2.extras import RealDictCursor
 
 from db import get_connection
-from models import Trainer, Member, GymClass, ClassSchedule, Enrollment, Attendance
+from models import Trainer, Member, GymClass, ClassSchedule, Enrollment, Attendance, AttendanceRosterRow
 
 _TRAINER_COLUMNS = (
     "id, name, email, phone, specialty, bio, years_experience"
@@ -635,6 +635,38 @@ def list_attendance_by_class(class_id: int) -> List[Attendance]:
             )
             rows = cur.fetchall()
     return [Attendance(**r) for r in rows]
+
+
+def list_class_attendance_roster(class_id: int, session_date: date) -> List[AttendanceRosterRow]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT m.id          AS member_id,
+                       m.name        AS member_name,
+                       m.membership_plan,
+                       m.email,
+                       a.attended_at
+                FROM enrollments e
+                JOIN members m ON m.id = e.member_id
+                LEFT JOIN attendance a
+                       ON a.member_id = m.id
+                      AND a.class_id  = e.class_id
+                      AND DATE(a.attended_at) = %(session_date)s
+                WHERE e.class_id = %(class_id)s
+                ORDER BY m.name, a.attended_at DESC
+                """,
+                {"class_id": class_id, "session_date": session_date},
+            )
+            rows = cur.fetchall()
+    seen = set()
+    result = []
+    for r in rows:
+        key = r["member_id"]
+        if key not in seen:
+            seen.add(key)
+            result.append(AttendanceRosterRow(**r))
+    return result
 
 
 def list_attendance_by_member(member_id: int) -> List[Attendance]:

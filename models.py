@@ -62,3 +62,12 @@ class Attendance:
     attended_at: datetime
     class_name: str
     member_name: str
+
+
+@dataclass
+class AttendanceRosterRow:
+    member_id: int
+    member_name: str
+    membership_plan: str
+    email: str
+    attended_at: datetime | None = None
