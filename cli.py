@@ -212,9 +212,17 @@ def show_trainers() -> None:
         print_empty("(no trainers registered)")
         return
     print_table(
-        ["ID", "Name", "Specialty", "Email"],
+        ["ID", "Name", "Specialty", "Email", "Phone", "Exp (yrs)", "Bio"],
         [
-            [str(trainer.id), trainer.name, trainer.specialty, trainer.email]
+            [
+                str(trainer.id),
+                trainer.name,
+                trainer.specialty,
+                trainer.email,
+                trainer.phone,
+                str(trainer.years_experience) if trainer.years_experience is not None else "—",
+                trainer.bio if trainer.bio else "—",
+            ]
             for trainer in trainers
         ],
     )
