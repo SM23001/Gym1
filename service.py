@@ -497,6 +497,12 @@ def list_attendance_by_class(class_id: int):
     return repo.list_attendance_by_class(class_id)
 
 
+def list_class_attendance_roster(class_id: int, session_date):
+    if repo.get_class(class_id) is None:
+        raise BusinessError("Clase no existe")
+    return repo.list_class_attendance_roster(class_id, session_date)
+
+
 def list_attendance_by_member(member_id: int):
     if not repo.get_member(member_id):
         raise BusinessError("Miembro no existe")

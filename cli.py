@@ -86,6 +86,15 @@ def prompt_time(label: str) -> time:
             print_error("Invalid format. Use HH:MM, e.g. 09:30.")
 
 
+def prompt_date(label: str) -> date:
+    while True:
+        raw = input(c(f"  {label} (YYYY-MM-DD): ", CYAN)).strip()
+        try:
+            return parse_date(raw)
+        except ValueError:
+            print_error("Invalid format. Use YYYY-MM-DD, e.g. 2026-06-10.")
+
+
 def prompt_optional_date(label: str, *, required: bool = False) -> date | None:
     hint = c(" [YYYY-MM-DD, Enter = skip]", CYAN)
     while True:
@@ -922,6 +931,32 @@ def show_attendance_records(records) -> None:
     )
 
 
+def show_class_attendance_header(gym_class, session_date) -> None:
+    print_section(f"Attendance Roster — [{gym_class.id}] {gym_class.name}")
+    print(f"  Class:   [{gym_class.id}] {gym_class.name}")
+    print(f"  Time:    {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print()
+
+
+def show_class_attendance_roster(rows) -> None:
+    if not rows:
+        print_empty("(no members enrolled in this class)")
+        return
+    print_table(
+        ["ID", "Member", "Present", "Plan", "Email"],
+        [
+            [
+                str(row.member_id),
+                row.member_name,
+                "✓" if row.attended_at else "—",
+                row.membership_plan,
+                row.email,
+            ]
+            for row in rows
+        ],
+    )
+
+
 def prompt_attendance_to_delete(class_id: int, member_id: int):
     records = service.list_attendance_for_pair(class_id, member_id)
     if not records:
@@ -989,20 +1024,11 @@ def run_attendance_menu() -> None:
                 if gym_class is None:
                     print_error("Class not found")
                 else:
-                    print_section(
-                        f"Attendance for [{gym_class.id}] {gym_class.name}"
+                    session_date = prompt_date("Date")
+                    show_class_attendance_header(gym_class, session_date)
+                    show_class_attendance_roster(
+                        service.list_class_attendance_roster(class_id, session_date)
                     )
-                    show_attendance_records(
-                        service.list_attendance_by_class(class_id)
-                    )
-                    print_section(
-                        f"Enrolled members of [{gym_class.id}] {gym_class.name}"
-                    )
-                    members = service.list_class_members(class_id)
-                    if not members:
-                        print_empty("(no members enrolled in this class)")
-                    else:
-                        show_member_rows(members)
                 pause()
 
             elif option == "6":
