@@ -712,6 +712,7 @@ def run_class_menu() -> None:
         ("3", "View by id"),
         ("4", "Update"),
         ("5", "Delete"),
+        ("6", "Classes of trainer"),
         ("0", "Back"),
     ]
     while True:
@@ -757,6 +758,19 @@ def run_class_menu() -> None:
                 class_id = prompt_class_id("Class to delete")
                 service.delete_class(class_id)
                 print_success("Class deleted")
+                pause()
+
+            elif option == "6":
+                trainer_id = prompt_trainer_id("Select a trainer")
+                t = service.get_trainer(trainer_id)
+                if t is None:
+                    print_error("Trainer not found")
+                else:
+                    print_section(f"Classes for [{t.id}] {t.name}")
+                    show_class_rows(
+                        service.list_classes_by_trainer(trainer_id),
+                        empty_message="(no classes for this trainer)",
+                    )
                 pause()
 
             elif option == "0":
