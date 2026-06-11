@@ -73,16 +73,6 @@ def seed_data() -> None:
         price=Decimal("25.00"),
         status="started",
     )
-    fitness = service.create_class(
-        "Fitness",
-        ana.id,
-        20,
-        [(day, time(19, 0), time(20, 0)) for day in range(5)]
-        + [(5, time(6, 0), time(7, 0)), (6, time(6, 0), time(7, 0))],
-        start_date=date(2026, 2, 2),
-        price=Decimal("30.00"),
-        status="scheduled",
-    )
     yoga = service.create_class(
         "Yoga",
         carlos.id,
@@ -95,6 +85,16 @@ def seed_data() -> None:
         end_date=date(2026, 6, 30),
         price=Decimal("20.00"),
         status="started",
+    )
+    fitness = service.create_class(
+        "Fitness",
+        ana.id,
+        20,
+        [(day, time(19, 0), time(20, 0)) for day in range(5)]
+        + [(5, time(6, 0), time(7, 0)), (6, time(6, 0), time(7, 0))],
+        start_date=date(2026, 2, 2),
+        price=Decimal("30.00"),
+        status="scheduled",
     )
     crossfit = service.create_class(
         "CrossFit",

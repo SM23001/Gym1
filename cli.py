@@ -934,7 +934,8 @@ def show_attendance_records(records) -> None:
 def show_class_attendance_header(gym_class, session_date) -> None:
     print_section(f"Attendance Roster — [{gym_class.id}] {gym_class.name}")
     print(f"  Class:   [{gym_class.id}] {gym_class.name}")
-    print(f"  Time:    {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"  Time:    {service.format_class_schedules(gym_class)}")
+    print(f"  Date:    {session_date.strftime('%Y-%m-%d')}")
     print()
 
 
