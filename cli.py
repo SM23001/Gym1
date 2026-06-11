@@ -243,22 +243,29 @@ def show_trainer_profile(trainer) -> None:
     print(f"  Bio:         {bio}")
 
 
+MEMBER_TABLE_HEADERS = ["ID", "Name", "Plan", "Email", "Phone", "Notes"]
+
+
+def member_table_row(member) -> list[str]:
+    notes = member.notes if member.notes else "(not set)"
+    return [
+        str(member.id),
+        member.name,
+        member.membership_plan,
+        member.email,
+        member.phone,
+        notes,
+    ]
+
+
 def show_members() -> None:
     members = service.list_members()
     if not members:
         print_empty("(no members registered)")
         return
     print_table(
-        ["ID", "Name", "Plan", "Email"],
-        [
-            [
-                str(member.id),
-                member.name,
-                member.membership_plan,
-                member.email,
-            ]
-            for member in members
-        ],
+        MEMBER_TABLE_HEADERS,
+        [member_table_row(member) for member in members],
     )
 
 
@@ -324,16 +331,8 @@ def show_member_rows(members, *, empty_message: str = "(no members)") -> None:
         print_empty(empty_message)
         return
     print_table(
-        ["ID", "Name", "Plan", "Email"],
-        [
-            [
-                str(member.id),
-                member.name,
-                member.membership_plan,
-                member.email,
-            ]
-            for member in members
-        ],
+        MEMBER_TABLE_HEADERS,
+        [member_table_row(member) for member in members],
     )
 
 
@@ -617,7 +616,6 @@ def run_member_menu() -> None:
         ("3", "View by id"),
         ("4", "Update"),
         ("5", "Delete"),
-        ("6", "Classes of member"),
         ("0", "Back"),
     ]
     while True:
@@ -688,19 +686,6 @@ def run_member_menu() -> None:
                 member_id = prompt_member_id("Member to delete")
                 service.delete_member(member_id)
                 print_success("Member deleted")
-                pause()
-
-            elif option == "6":
-                member_id = prompt_member_id("Select a member")
-                m = service.get_member(member_id)
-                if m is None:
-                    print_error("Member not found")
-                else:
-                    print_section(f"Classes for [{m.id}] {m.name}")
-                    show_class_rows(
-                        service.list_member_classes(member_id),
-                        empty_message="(no classes for this member)",
-                    )
                 pause()
 
             elif option == "0":
