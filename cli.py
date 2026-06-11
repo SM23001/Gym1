@@ -503,6 +503,16 @@ def prompt_member_id(action: str) -> int:
     return prompt_int("Member id", min_value=1)
 
 
+def prompt_enrolled_member_id(action: str, class_id: int) -> int | None:
+    print_section(action)
+    members = service.list_class_members(class_id)
+    if not members:
+        print_empty("(no members enrolled in this class)")
+        return None
+    show_member_rows(members)
+    return prompt_int("Member id", min_value=1)
+
+
 def prompt_class_id(action: str) -> int:
     print_section(action)
     show_classes()
@@ -843,7 +853,12 @@ def run_enrollment_menu() -> None:
 
             elif option == "4":
                 class_id = prompt_class_id("Class to unenroll from")
-                member_id = prompt_member_id("Member to unenroll")
+                member_id = prompt_enrolled_member_id(
+                    "Member to unenroll", class_id
+                )
+                if member_id is None:
+                    pause()
+                    continue
                 service.unenroll_member(class_id, member_id)
                 print_success("Member unenrolled successfully")
                 pause()
