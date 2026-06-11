@@ -712,7 +712,6 @@ def run_class_menu() -> None:
         ("3", "View by id"),
         ("4", "Update"),
         ("5", "Delete"),
-        ("6", "Members of class"),
         ("0", "Back"),
     ]
     while True:
@@ -758,20 +757,6 @@ def run_class_menu() -> None:
                 class_id = prompt_class_id("Class to delete")
                 service.delete_class(class_id)
                 print_success("Class deleted")
-                pause()
-
-            elif option == "6":
-                class_id = prompt_class_id("Select a class")
-                gym_class = service.get_class(class_id)
-                if gym_class is None:
-                    print_error("Class not found")
-                else:
-                    print_section(f"Members of [{gym_class.id}] {gym_class.name}")
-                    members = service.list_class_members(class_id)
-                    if not members:
-                        print_empty("(no members enrolled in this class)")
-                    else:
-                        show_member_rows(members)
                 pause()
 
             elif option == "0":
