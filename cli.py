@@ -804,10 +804,9 @@ def run_enrollment_menu() -> None:
     options = [
         ("1", "Enroll member in class"),
         ("2", "List enrollments"),
-        ("3", "View enrollment"),
-        ("4", "Unenroll member"),
-        ("5", "Members of class"),
-        ("6", "Classes of member"),
+        ("3", "Unenroll member"),
+        ("4", "Members of class"),
+        ("5", "Classes of member"),
         ("0", "Back"),
     ]
     while True:
@@ -843,15 +842,6 @@ def run_enrollment_menu() -> None:
                 pause()
 
             elif option == "3":
-                class_id = prompt_class_id("Class")
-                member_id = prompt_member_id("Member")
-                if service.is_enrolled(class_id, member_id):
-                    print_success("Member is enrolled in this class")
-                else:
-                    print_error("Member is not enrolled in this class")
-                pause()
-
-            elif option == "4":
                 class_id = prompt_class_id("Class to unenroll from")
                 member_id = prompt_enrolled_member_id(
                     "Member to unenroll", class_id
@@ -863,7 +853,7 @@ def run_enrollment_menu() -> None:
                 print_success("Member unenrolled successfully")
                 pause()
 
-            elif option == "5":
+            elif option == "4":
                 class_id = prompt_class_id("Select a class")
                 gym_class = service.get_class(class_id)
                 if gym_class is None:
@@ -877,7 +867,7 @@ def run_enrollment_menu() -> None:
                         show_member_rows(members)
                 pause()
 
-            elif option == "6":
+            elif option == "5":
                 member_id = prompt_member_id("Select a member")
                 m = service.get_member(member_id)
                 if m is None:
