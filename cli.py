@@ -1062,10 +1062,14 @@ def show_attendance_records(records) -> None:
     )
 
 
-def show_class_attendance_header(gym_class, session_date) -> None:
+def show_class_attendance_header(gym_class, session_date, *, schedule=None) -> None:
     print_section(f"Attendance Roster — [{gym_class.id}] {gym_class.name}")
     print(f"  Class:   [{gym_class.id}] {gym_class.name}")
-    print(f"  Time:    {service.format_class_schedules(gym_class)}")
+    if schedule is not None:
+        time_label = service.format_schedule_slot(schedule)
+    else:
+        time_label = service.format_class_schedules(gym_class)
+    print(f"  Time:    {time_label}")
     print(f"  Date:    {session_date.strftime('%Y-%m-%d')}")
     print()
 
@@ -1087,6 +1091,23 @@ def show_class_attendance_roster(rows) -> None:
             for row in rows
         ],
     )
+
+
+def prompt_roster_member_id(
+    gym_class, class_id: int, session_date: date, *, schedule=None
+) -> int | None:
+    rows = service.list_class_attendance_roster(class_id, session_date)
+    if not rows:
+        print_empty("(no members enrolled in this class)")
+        return None
+    show_class_attendance_header(gym_class, session_date, schedule=schedule)
+    show_class_attendance_roster(rows)
+    member_ids = {row.member_id for row in rows}
+    while True:
+        member_id = prompt_int("Member id", min_value=1)
+        if member_id in member_ids:
+            return member_id
+        print_error("Member is not enrolled in this class.")
 
 
 def prompt_attendance_to_delete(class_id: int, member_id: int):
@@ -1134,7 +1155,9 @@ def run_attendance_menu() -> None:
                 if session_date is None:
                     pause()
                     continue
-                member_id = prompt_enrolled_member_id("Member", class_id)
+                member_id = prompt_roster_member_id(
+                    gym_class, class_id, session_date, schedule=schedule
+                )
                 if member_id is None:
                     pause()
                     continue
