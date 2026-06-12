@@ -361,11 +361,14 @@ def prompt_class_schedule(gym_class):
     return schedules[index - 1]
 
 
+_WEEKDAY_HEADERS = (" Mo", " Tu", " We", " Th", " Fr", " Sa", " Su")
+
+
 def _print_month_calendar(
     year: int, month: int, valid_dates: set[date]
 ) -> None:
     print(c(f"      {calendar.month_name[month]} {year}", CYAN))
-    print(c("  Mo Tu We Th Fr Sa Su", CYAN))
+    print(c("  " + " ".join(_WEEKDAY_HEADERS), CYAN))
     for week in calendar.monthcalendar(year, month):
         cells = []
         for day in week:
