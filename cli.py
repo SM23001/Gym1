@@ -528,6 +528,21 @@ def prompt_available_member_id(action: str, class_id: int) -> int | None:
     return prompt_int("Member id", min_value=1)
 
 
+def prompt_member_with_classes_id(action: str) -> int | None:
+    print_section(action)
+    enrolled_ids = {enrollment.member_id for enrollment in service.list_enrollments()}
+    members = [
+        member
+        for member in service.list_members()
+        if member.id in enrolled_ids
+    ]
+    if not members:
+        print_empty("(no members enrolled in any class)")
+        return None
+    show_member_rows(members)
+    return prompt_int("Member id", min_value=1)
+
+
 def prompt_class_id(action: str) -> int:
     print_section(action)
     show_classes()
@@ -888,7 +903,10 @@ def run_enrollment_menu() -> None:
                 pause()
 
             elif option == "5":
-                member_id = prompt_member_id("Select a member")
+                member_id = prompt_member_with_classes_id("Select a member")
+                if member_id is None:
+                    pause()
+                    continue
                 m = service.get_member(member_id)
                 if m is None:
                     print_error("Member not found")
