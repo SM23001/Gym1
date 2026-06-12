@@ -115,9 +115,26 @@ def seed_data() -> None:
     service.enroll_member(yoga.id, sofia.id)
     service.enroll_member(crossfit.id, juan.id)
 
-    service.mark_attendance(spinning.id, juan.id)
-    service.mark_attendance(spinning.id, maria.id)
-    service.mark_attendance(yoga.id, sofia.id)
+    spinning_slot = next(s for s in spinning.schedules if s.day_of_week == 0)
+    yoga_slot = next(s for s in yoga.schedules if s.day_of_week == 0)
+    service.mark_attendance(
+        spinning.id,
+        juan.id,
+        schedule_id=spinning_slot.id,
+        session_date=date(2026, 1, 12),
+    )
+    service.mark_attendance(
+        spinning.id,
+        maria.id,
+        schedule_id=spinning_slot.id,
+        session_date=date(2026, 1, 19),
+    )
+    service.mark_attendance(
+        yoga.id,
+        sofia.id,
+        schedule_id=yoga_slot.id,
+        session_date=date(2026, 1, 5),
+    )
 
 
 def main() -> int:

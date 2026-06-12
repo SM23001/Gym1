@@ -44,6 +44,8 @@ def test_enroll_member_capacity_and_overlap():
 
 
 def test_mark_attendance_requires_enrollment():
+    from datetime import date
+
     trainer = create_test_trainer("T")
     member = create_test_member("M", email="m@gym.com")
     gym_class = service.create_class(
@@ -52,12 +54,24 @@ def test_mark_attendance_requires_enrollment():
         5,
         [(1, time(18, 0), time(19, 0))],
     )
+    schedule = gym_class.schedules[0]
+    session_date = date(2026, 1, 6)
 
     with pytest.raises(service.BusinessError):
-        service.mark_attendance(gym_class.id, member.id)
+        service.mark_attendance(
+            gym_class.id,
+            member.id,
+            schedule_id=schedule.id,
+            session_date=session_date,
+        )
 
     service.enroll_member(gym_class.id, member.id)
-    service.mark_attendance(gym_class.id, member.id)
+    service.mark_attendance(
+        gym_class.id,
+        member.id,
+        schedule_id=schedule.id,
+        session_date=session_date,
+    )
 
     with get_connection() as conn:
         with conn.cursor() as cur:

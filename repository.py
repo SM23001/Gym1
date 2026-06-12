@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import List, Optional
 
@@ -603,15 +603,15 @@ def _attendance_select() -> str:
     """
 
 
-def mark_attendance(class_id: int, member_id: int) -> None:
+def mark_attendance(class_id: int, member_id: int, attended_at: datetime) -> None:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO attendance (class_id, member_id)
-                VALUES (%s, %s)
+                INSERT INTO attendance (class_id, member_id, attended_at)
+                VALUES (%s, %s, %s)
                 """,
-                (class_id, member_id),
+                (class_id, member_id, attended_at),
             )
 
 
@@ -694,6 +694,22 @@ def list_attendance_for_pair(class_id: int, member_id: int) -> List[Attendance]:
             )
             rows = cur.fetchall()
     return [Attendance(**r) for r in rows]
+
+
+def has_attendance_on_date(
+    class_id: int, member_id: int, session_date: date
+) -> bool:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 1 FROM attendance
+                WHERE class_id = %s AND member_id = %s AND DATE(attended_at) = %s
+                LIMIT 1
+                """,
+                (class_id, member_id, session_date),
+            )
+            return cur.fetchone() is not None
 
 
 def has_attendance(class_id: int, member_id: int) -> bool:
