@@ -1,9 +1,10 @@
+import calendar
 from datetime import date, datetime, time
 from decimal import Decimal, InvalidOperation
 
 import psycopg2
 
-from colors import CYAN, YELLOW, c
+from colors import CYAN, GREEN, YELLOW, c
 from db import init_schema
 import service
 from ui import (
@@ -358,6 +359,85 @@ def prompt_class_schedule(gym_class):
         )
     index = prompt_int("Slot", min_value=1, max_value=len(schedules))
     return schedules[index - 1]
+
+
+def _print_month_calendar(
+    year: int, month: int, valid_dates: set[date]
+) -> None:
+    print(c(f"      {calendar.month_name[month]} {year}", CYAN))
+    print(c("  Mo Tu We Th Fr Sa Su", CYAN))
+    for week in calendar.monthcalendar(year, month):
+        cells = []
+        for day in week:
+            if day == 0:
+                cells.append("   ")
+                continue
+            session_date = date(year, month, day)
+            if session_date in valid_dates:
+                cells.append(c(f"*{day:2d}", GREEN))
+            else:
+                cells.append(f" {day:2d}")
+        print("  " + " ".join(cells))
+
+
+def show_session_calendar(gym_class, schedule) -> list[date]:
+    valid_dates = service.list_valid_session_dates(gym_class, schedule)
+    print_section("Session calendar")
+    print(
+        f"  Class period: {service.format_class_date(gym_class.start_date)}"
+        f" → {service.format_class_date(gym_class.end_date)}"
+    )
+    print(f"  Schedule:     {service.format_schedule_slot(schedule)}")
+    print()
+    if not valid_dates:
+        print_empty("(no session dates match this schedule in the class period)")
+        return valid_dates
+
+    valid_set = set(valid_dates)
+    start = gym_class.start_date
+    end = gym_class.end_date
+    year, month = start.year, start.month
+    while (year, month) <= (end.year, end.month):
+        _print_month_calendar(year, month, valid_set)
+        print()
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+
+    print(c("  * = valid session date", YELLOW))
+    print()
+    print(c("  Valid session dates:", CYAN))
+    for index, session_date in enumerate(valid_dates, start=1):
+        print(f"    [{index}] {session_date.isoformat()}")
+    return valid_dates
+
+
+def prompt_session_date(gym_class, schedule) -> date | None:
+    valid_dates = show_session_calendar(gym_class, schedule)
+    if not valid_dates:
+        if gym_class.start_date is None or gym_class.end_date is None:
+            return prompt_date("Session date")
+        return None
+
+    hint = c(f" [1-{len(valid_dates)} or YYYY-MM-DD]", CYAN)
+    while True:
+        raw = input(c(f"  Session date{hint}: ", CYAN)).strip()
+        if raw.isdigit():
+            index = int(raw)
+            if 1 <= index <= len(valid_dates):
+                return valid_dates[index - 1]
+            print_error(f"Enter a number between 1 and {len(valid_dates)}.")
+            continue
+        try:
+            session_date = parse_date(raw)
+        except ValueError:
+            print_error("Enter a list number or a date (YYYY-MM-DD).")
+            continue
+        if session_date not in valid_dates:
+            print_error("That date is not a valid session for this schedule.")
+            continue
+        return session_date
 
 
 def prompt_schedules(*, existing=None):
@@ -1040,7 +1120,10 @@ def run_attendance_menu() -> None:
                 if schedule is None:
                     pause()
                     continue
-                session_date = prompt_date("Session date")
+                session_date = prompt_session_date(gym_class, schedule)
+                if session_date is None:
+                    pause()
+                    continue
                 member_id = prompt_enrolled_member_id("Member", class_id)
                 if member_id is None:
                     pause()
