@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
 
 from models import GymClass, ClassSchedule, Enrollment, Attendance
@@ -583,6 +583,22 @@ def list_member_classes(member_id: int):
 
 def list_class_members(class_id: int):
     return repo.list_class_members(class_id)
+
+
+def list_valid_session_dates(
+    gym_class: GymClass, schedule: ClassSchedule
+) -> list[date]:
+    start = gym_class.start_date
+    end = gym_class.end_date
+    if start is None or end is None:
+        return []
+    dates: list[date] = []
+    current = start
+    while current <= end:
+        if current.weekday() == schedule.day_of_week:
+            dates.append(current)
+        current += timedelta(days=1)
+    return dates
 
 
 def format_schedule_slot(schedule: ClassSchedule) -> str:

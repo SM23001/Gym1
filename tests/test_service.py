@@ -81,3 +81,34 @@ def test_mark_attendance_requires_enrollment():
             )
             (count,) = cur.fetchone()
     assert count >= 1
+
+
+def test_list_valid_session_dates():
+    from datetime import date
+
+    from models import ClassSchedule, GymClass
+
+    gym_class = GymClass(
+        id=1,
+        name="Yoga",
+        trainer_id=1,
+        capacity=8,
+        start_date=date(2026, 6, 18),
+        end_date=date(2026, 7, 17),
+        schedules=[
+            ClassSchedule(
+                id=1,
+                class_id=1,
+                day_of_week=0,
+                start_time=time(18, 0),
+                end_time=time(19, 0),
+            )
+        ],
+    )
+    schedule = gym_class.schedules[0]
+    assert service.list_valid_session_dates(gym_class, schedule) == [
+        date(2026, 6, 22),
+        date(2026, 6, 29),
+        date(2026, 7, 6),
+        date(2026, 7, 13),
+    ]
