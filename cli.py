@@ -364,11 +364,18 @@ def prompt_class_schedule(gym_class):
 _WEEKDAY_HEADERS = (" Mo", " Tu", " We", " Th", " Fr", " Sa", " Su")
 
 
+def _calendar_header_line() -> str:
+    return "  " + " ".join(_WEEKDAY_HEADERS)
+
+
 def _print_month_calendar(
     year: int, month: int, valid_dates: set[date]
 ) -> None:
-    print(c(f"      {calendar.month_name[month]} {year}", CYAN))
-    print(c("  " + " ".join(_WEEKDAY_HEADERS), CYAN))
+    header_line = _calendar_header_line()
+    title = f"{calendar.month_name[month]} {year}"
+    left_pad = max(0, (len(header_line) - len(title)) // 2)
+    print(c(" " * left_pad + title, CYAN))
+    print(c(header_line, CYAN))
     for week in calendar.monthcalendar(year, month):
         cells = []
         for day in week:
@@ -380,7 +387,7 @@ def _print_month_calendar(
                 cells.append(c(f"*{day:2d}", GREEN))
             else:
                 cells.append(f" {day:2d}")
-        print("  " + " ".join(cells))
+        print(header_line[:2] + " ".join(cells))
 
 
 def show_session_calendar(gym_class, schedule) -> list[date]:
