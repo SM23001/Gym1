@@ -1011,7 +1011,10 @@ def run_attendance_menu() -> None:
         try:
             if option == "1":
                 class_id = prompt_class_id("Class")
-                member_id = prompt_member_id("Member")
+                member_id = prompt_enrolled_member_id("Member", class_id)
+                if member_id is None:
+                    pause()
+                    continue
                 service.mark_attendance(class_id, member_id)
                 print_success("Attendance recorded")
                 pause()
