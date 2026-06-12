@@ -1,7 +1,8 @@
 """Load demo data into the gym database via the service layer."""
 import argparse
+import calendar
 import sys
-from datetime import date, time
+from datetime import date, timedelta, time
 from decimal import Decimal
 
 from config import get_settings
@@ -12,6 +13,17 @@ _TRUNCATE_SQL = (
     "TRUNCATE attendance, enrollments, class_schedules, classes, "
     "members, trainers RESTART IDENTITY CASCADE"
 )
+
+
+def _one_month_period(start: date) -> tuple[date, date]:
+    """Return (start, end) spanning one calendar month (e.g. May 10 – Jun 9)."""
+    if start.month == 12:
+        year, month = start.year + 1, 1
+    else:
+        year, month = start.year, start.month + 1
+    last_day = calendar.monthrange(year, month)[1]
+    anchor = date(year, month, min(start.day, last_day))
+    return start, anchor - timedelta(days=1)
 
 
 def reset_data() -> None:
@@ -63,16 +75,29 @@ def seed_data() -> None:
         "Sofía Torres", "sofia.torres@gym.com", "5552004", "Premium"
     )
 
+    crossfit_start, crossfit_end = _one_month_period(date(2026, 4, 3))
+    crossfit = service.create_class(
+        "CrossFit",
+        laura.id,
+        12,
+        [(2, time(7, 0), time(8, 0))],
+        start_date=crossfit_start,
+        end_date=crossfit_end,
+        price=Decimal("35.50"),
+        status="ended",
+    )
+    spinning_start, spinning_end = _one_month_period(date(2026, 6, 5))
     spinning = service.create_class(
         "Spinning",
         ana.id,
         10,
         [(0, time(9, 0), time(10, 0))],
-        start_date=date(2026, 1, 6),
-        end_date=date(2026, 3, 30),
+        start_date=spinning_start,
+        end_date=spinning_end,
         price=Decimal("25.00"),
         status="started",
     )
+    yoga_start, yoga_end = _one_month_period(date(2026, 6, 18))
     yoga = service.create_class(
         "Yoga",
         carlos.id,
@@ -81,30 +106,22 @@ def seed_data() -> None:
             (0, time(18, 0), time(19, 0)),
             (4, time(18, 0), time(19, 0)),
         ],
-        start_date=date(2026, 1, 5),
-        end_date=date(2026, 6, 30),
+        start_date=yoga_start,
+        end_date=yoga_end,
         price=Decimal("20.00"),
         status="started",
     )
+    fitness_start, fitness_end = _one_month_period(date(2026, 7, 22))
     fitness = service.create_class(
         "Fitness",
         ana.id,
         20,
         [(day, time(19, 0), time(20, 0)) for day in range(5)]
         + [(5, time(6, 0), time(7, 0)), (6, time(6, 0), time(7, 0))],
-        start_date=date(2026, 2, 2),
+        start_date=fitness_start,
+        end_date=fitness_end,
         price=Decimal("30.00"),
         status="scheduled",
-    )
-    crossfit = service.create_class(
-        "CrossFit",
-        laura.id,
-        12,
-        [(2, time(7, 0), time(8, 0))],
-        start_date=date(2025, 9, 1),
-        end_date=date(2025, 12, 15),
-        price=Decimal("35.50"),
-        status="ended",
     )
 
     service.enroll_member(spinning.id, juan.id)
@@ -121,19 +138,19 @@ def seed_data() -> None:
         spinning.id,
         juan.id,
         schedule_id=spinning_slot.id,
-        session_date=date(2026, 1, 12),
+        session_date=date(2026, 6, 15),
     )
     service.mark_attendance(
         spinning.id,
         maria.id,
         schedule_id=spinning_slot.id,
-        session_date=date(2026, 1, 19),
+        session_date=date(2026, 6, 22),
     )
     service.mark_attendance(
         yoga.id,
         sofia.id,
         schedule_id=yoga_slot.id,
-        session_date=date(2026, 1, 5),
+        session_date=date(2026, 6, 22),
     )
 
 
