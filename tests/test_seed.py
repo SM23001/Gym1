@@ -1,7 +1,15 @@
 from conftest import TRUNCATE_GYM_TABLES
 from db import init_schema, get_connection
 import service
-from seed import seed_data
+from datetime import date
+
+from seed import _one_month_period, seed_data
+
+
+def test_one_month_period():
+    start, end = _one_month_period(date(2026, 5, 10))
+    assert start == date(2026, 5, 10)
+    assert end == date(2026, 6, 9)
 
 
 def test_seed_data_populates_demo_records():
