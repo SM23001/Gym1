@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date, datetime, time
 from decimal import Decimal, InvalidOperation
 
 from models import GymClass, ClassSchedule, Enrollment, Attendance
@@ -477,14 +477,40 @@ def format_enrollment(enrollment: Enrollment) -> str:
     )
 
 
-def mark_attendance(class_id: int, member_id: int) -> None:
-    if repo.get_class(class_id) is None:
+def _find_class_schedule(gym_class: GymClass, schedule_id: int) -> ClassSchedule:
+    for schedule in gym_class.schedules:
+        if schedule.id == schedule_id:
+            return schedule
+    raise BusinessError("El horario no pertenece a esta clase")
+
+
+def mark_attendance(
+    class_id: int,
+    member_id: int,
+    *,
+    schedule_id: int,
+    session_date: date,
+) -> None:
+    gym_class = repo.get_class(class_id)
+    if gym_class is None:
         raise BusinessError("Clase no existe")
     if not repo.get_member(member_id):
         raise BusinessError("Miembro no existe")
     if not repo.is_member_enrolled(class_id, member_id):
         raise BusinessError("El miembro no está inscrito en esta clase")
-    repo.mark_attendance(class_id, member_id)
+
+    schedule = _find_class_schedule(gym_class, schedule_id)
+    if session_date.weekday() != schedule.day_of_week:
+        raise BusinessError("La fecha no coincide con el día del horario")
+    if gym_class.start_date and session_date < gym_class.start_date:
+        raise BusinessError("La fecha está fuera del período de la clase")
+    if gym_class.end_date and session_date > gym_class.end_date:
+        raise BusinessError("La fecha está fuera del período de la clase")
+    if repo.has_attendance_on_date(class_id, member_id, session_date):
+        raise BusinessError("El miembro ya tiene asistencia registrada en esta fecha")
+
+    attended_at = datetime.combine(session_date, schedule.start_time)
+    repo.mark_attendance(class_id, member_id, attended_at)
 
 
 def list_attendance():
@@ -559,6 +585,14 @@ def list_class_members(class_id: int):
     return repo.list_class_members(class_id)
 
 
+def format_schedule_slot(schedule: ClassSchedule) -> str:
+    return (
+        f"{DAY_NAMES[schedule.day_of_week]} "
+        f"{schedule.start_time.strftime('%H:%M')}-"
+        f"{schedule.end_time.strftime('%H:%M')}"
+    )
+
+
 def format_class_schedules(gym_class: GymClass) -> str:
     if not gym_class.schedules:
         return "(no schedule)"
@@ -566,11 +600,7 @@ def format_class_schedules(gym_class: GymClass) -> str:
     for schedule in sorted(
         gym_class.schedules, key=lambda s: (s.day_of_week, s.start_time)
     ):
-        parts.append(
-            f"{DAY_NAMES[schedule.day_of_week]} "
-            f"{schedule.start_time.strftime('%H:%M')}-"
-            f"{schedule.end_time.strftime('%H:%M')}"
-        )
+        parts.append(format_schedule_slot(schedule))
     return ", ".join(parts)
 
 

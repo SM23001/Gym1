@@ -340,6 +340,26 @@ def format_class_schedule_cell(gym_class) -> str:
     return service.format_class_schedules(gym_class)
 
 
+def prompt_class_schedule(gym_class):
+    schedules = sorted(
+        gym_class.schedules, key=lambda s: (s.day_of_week, s.start_time)
+    )
+    if not schedules:
+        print_empty("(no schedule slots for this class)")
+        return None
+    if len(schedules) == 1:
+        print_section("Schedule slot")
+        print_success(service.format_schedule_slot(schedules[0]))
+        return schedules[0]
+    print_section("Select schedule slot")
+    for index, schedule in enumerate(schedules, start=1):
+        print(
+            c(f"  [{index}] {service.format_schedule_slot(schedule)}", CYAN)
+        )
+    index = prompt_int("Slot", min_value=1, max_value=len(schedules))
+    return schedules[index - 1]
+
+
 def prompt_schedules(*, existing=None):
     if existing is not None and existing.schedules:
         print(c("  Current schedule:", CYAN))
@@ -1011,11 +1031,26 @@ def run_attendance_menu() -> None:
         try:
             if option == "1":
                 class_id = prompt_class_id("Class")
+                gym_class = service.get_class(class_id)
+                if gym_class is None:
+                    print_error("Class not found")
+                    pause()
+                    continue
+                schedule = prompt_class_schedule(gym_class)
+                if schedule is None:
+                    pause()
+                    continue
+                session_date = prompt_date("Session date")
                 member_id = prompt_enrolled_member_id("Member", class_id)
                 if member_id is None:
                     pause()
                     continue
-                service.mark_attendance(class_id, member_id)
+                service.mark_attendance(
+                    class_id,
+                    member_id,
+                    schedule_id=schedule.id,
+                    session_date=session_date,
+                )
                 print_success("Attendance recorded")
                 pause()
 
