@@ -450,6 +450,17 @@ def prompt_session_date(gym_class, schedule) -> date | None:
         return session_date
 
 
+def prompt_class_session(gym_class):
+    schedule = prompt_class_schedule(gym_class)
+    if schedule is None:
+        return None, None
+    session_date = prompt_session_date(gym_class, schedule)
+    if session_date is None:
+        return None, None
+    print_success(session_date.isoformat())
+    return schedule, session_date
+
+
 def prompt_schedules(*, existing=None):
     if existing is not None and existing.schedules:
         print(c("  Current schedule:", CYAN))
@@ -1147,12 +1158,8 @@ def run_attendance_menu() -> None:
                     print_error("Class not found")
                     pause()
                     continue
-                schedule = prompt_class_schedule(gym_class)
+                schedule, session_date = prompt_class_session(gym_class)
                 if schedule is None:
-                    pause()
-                    continue
-                session_date = prompt_session_date(gym_class, schedule)
-                if session_date is None:
                     pause()
                     continue
                 member_id = prompt_roster_member_id(
@@ -1199,12 +1206,18 @@ def run_attendance_menu() -> None:
                 gym_class = service.get_class(class_id)
                 if gym_class is None:
                     print_error("Class not found")
-                else:
-                    session_date = prompt_date("Date")
-                    show_class_attendance_header(gym_class, session_date)
-                    show_class_attendance_roster(
-                        service.list_class_attendance_roster(class_id, session_date)
-                    )
+                    pause()
+                    continue
+                schedule, session_date = prompt_class_session(gym_class)
+                if schedule is None:
+                    pause()
+                    continue
+                show_class_attendance_header(
+                    gym_class, session_date, schedule=schedule
+                )
+                show_class_attendance_roster(
+                    service.list_class_attendance_roster(class_id, session_date)
+                )
                 pause()
 
             elif option == "6":
