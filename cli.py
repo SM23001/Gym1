@@ -1,11 +1,13 @@
 import calendar
 from datetime import date, datetime, time
 from decimal import Decimal, InvalidOperation
+from getpass import getpass
 
 import psycopg2
 
 from colors import CYAN, GREEN, YELLOW, c
 from db import init_schema
+from models import AppUser, UserRole
 import service
 from ui import (
     clear_screen,
@@ -670,6 +672,387 @@ def prompt_class_id(action: str) -> int:
     return prompt_int("Class id", min_value=1)
 
 
+def prompt_class_id_from_list(action: str, classes) -> int | None:
+    print_section(action)
+    if not classes:
+        print_empty("(no classes available)")
+        return None
+    show_class_rows(classes)
+    class_ids = {gym_class.id for gym_class in classes}
+    while True:
+        class_id = prompt_int("Class id", min_value=1)
+        if class_id in class_ids:
+            return class_id
+        print_error("Invalid class id.")
+
+
+def prompt_password(label: str = "Password") -> str:
+    while True:
+        value = getpass(c(f"  {label}: ", CYAN))
+        if value:
+            return value
+        print_error("This field is required.")
+
+
+def format_user_label(user: AppUser) -> str:
+    return f"{user.username} ({user.role.value})"
+
+
+def run_login() -> AppUser | None:
+    while True:
+        clear_screen()
+        print_banner()
+        print_header("Login")
+        print("  1. Sign in")
+        print("  0. Exit")
+        option = prompt_option()
+
+        if option == "0":
+            return None
+        if option != "1":
+            print_error("Invalid option.")
+            pause()
+            continue
+
+        username = prompt_text("Username")
+        password = prompt_password()
+        try:
+            user = service.authenticate(username, password)
+            print_success(f"Welcome, {format_user_label(user)}")
+            pause()
+            return user
+        except service.BusinessError as e:
+            print_error(str(e))
+            pause()
+
+
+def run_bootstrap_admin() -> None:
+    clear_screen()
+    print_banner()
+    print_header("First-time setup")
+    print("  No users found. Create the first administrator account.")
+    print()
+    username = prompt_text("Admin username")
+    password = prompt_password("Password")
+    confirm = prompt_password("Confirm password")
+    if password != confirm:
+        print_error("Passwords do not match.")
+        pause()
+        return
+    try:
+        service.bootstrap_admin(username, password)
+        print_success("Administrator created. Sign in to continue.")
+    except service.BusinessError as e:
+        print_error(str(e))
+    pause()
+
+
+def run_users_menu(actor: AppUser) -> None:
+    options = [
+        ("1", "List users"),
+        ("2", "Create user"),
+        ("3", "Deactivate user"),
+        ("4", "Activate user"),
+        ("0", "Back"),
+    ]
+    while True:
+        clear_screen()
+        print_banner()
+        print_header("Users")
+        print_menu(options)
+        option = prompt_option()
+
+        try:
+            if option == "1":
+                print_section("App users")
+                users = service.list_app_users(actor)
+                if not users:
+                    print_empty("(no users)")
+                else:
+                    for user in users:
+                        print(f"    {service.format_app_user(user)}")
+                pause()
+
+            elif option == "2":
+                username = prompt_text("Username")
+                password = prompt_password("Password")
+                print("  Role: 1=admin  2=trainer  3=member")
+                role_choice = prompt_int("Role", min_value=1, max_value=3)
+                role_map = {
+                    1: UserRole.ADMIN,
+                    2: UserRole.TRAINER,
+                    3: UserRole.MEMBER,
+                }
+                role = role_map[role_choice]
+                trainer_id = None
+                member_id = None
+                if role == UserRole.TRAINER:
+                    trainer_id = prompt_trainer_id("Link to trainer profile")
+                elif role == UserRole.MEMBER:
+                    member_id = prompt_member_id("Link to member profile")
+                user = service.create_app_user(
+                    actor,
+                    username,
+                    password,
+                    role,
+                    trainer_id=trainer_id,
+                    member_id=member_id,
+                )
+                print_success(f"User created: {service.format_app_user(user)}")
+                pause()
+
+            elif option == "3":
+                user_id = prompt_int("User id to deactivate", min_value=1)
+                user = service.deactivate_app_user(actor, user_id)
+                print_success(f"Deactivated: {service.format_app_user(user)}")
+                pause()
+
+            elif option == "4":
+                user_id = prompt_int("User id to activate", min_value=1)
+                user = service.activate_app_user(actor, user_id)
+                print_success(f"Activated: {service.format_app_user(user)}")
+                pause()
+
+            elif option == "0":
+                return
+
+            else:
+                print_error("Invalid option.")
+
+        except service.BusinessError as e:
+            print_error(str(e))
+            pause()
+        except ValueError as e:
+            print_error(str(e))
+            pause()
+        except psycopg2.Error as e:
+            print_error(f"Database: {e}")
+            pause()
+
+
+def run_trainer_portal(actor: AppUser) -> None:
+    options = [
+        ("1", "My classes"),
+        ("2", "Members of class"),
+        ("3", "Record attendance"),
+        ("4", "Class attendance roster"),
+        ("0", "Logout"),
+    ]
+    while True:
+        clear_screen()
+        print_banner()
+        print_header(f"Trainer — {format_user_label(actor)}")
+        print_menu(options)
+        option = prompt_option()
+
+        try:
+            classes = service.list_classes_for_actor(actor)
+
+            if option == "1":
+                print_section("My classes")
+                show_class_rows(
+                    classes,
+                    empty_message="(no classes assigned)",
+                )
+                pause()
+
+            elif option == "2":
+                class_id = prompt_class_id_from_list("Select a class", classes)
+                if class_id is None:
+                    pause()
+                    continue
+                gym_class = service.get_class_for_actor(actor, class_id)
+                print_section(f"Members of [{gym_class.id}] {gym_class.name}")
+                members = service.list_class_members(class_id)
+                if not members:
+                    print_empty("(no members enrolled in this class)")
+                else:
+                    show_member_rows(members)
+                pause()
+
+            elif option == "3":
+                class_id = prompt_class_id_from_list("Class", classes)
+                if class_id is None:
+                    pause()
+                    continue
+                gym_class = service.get_class_for_actor(actor, class_id)
+                schedule, session_date = prompt_class_session(gym_class)
+                if schedule is None:
+                    pause()
+                    continue
+                member_id = prompt_roster_member_id(
+                    gym_class, class_id, session_date, schedule=schedule
+                )
+                if member_id is None:
+                    pause()
+                    continue
+                service.mark_attendance(
+                    class_id,
+                    member_id,
+                    schedule_id=schedule.id,
+                    session_date=session_date,
+                    actor=actor,
+                )
+                print_success("Attendance recorded")
+                pause()
+
+            elif option == "4":
+                class_id = prompt_class_id_from_list("Select a class", classes)
+                if class_id is None:
+                    pause()
+                    continue
+                gym_class = service.get_class_for_actor(actor, class_id)
+                schedule, session_date = prompt_class_session(gym_class)
+                if schedule is None:
+                    pause()
+                    continue
+                show_class_attendance_header(
+                    gym_class, session_date, schedule=schedule
+                )
+                show_class_attendance_roster(
+                    service.list_class_attendance_roster(class_id, session_date)
+                )
+                pause()
+
+            elif option == "0":
+                return
+
+            else:
+                print_error("Invalid option.")
+
+        except service.BusinessError as e:
+            print_error(str(e))
+            pause()
+        except ValueError as e:
+            print_error(str(e))
+            pause()
+        except psycopg2.Error as e:
+            print_error(f"Database: {e}")
+            pause()
+
+
+def run_member_portal(actor: AppUser) -> None:
+    options = [
+        ("1", "My classes"),
+        ("2", "My attendance"),
+        ("3", "Enroll in class"),
+        ("4", "Unenroll from class"),
+        ("0", "Logout"),
+    ]
+    while True:
+        clear_screen()
+        print_banner()
+        print_header(f"Member — {format_user_label(actor)}")
+        print_menu(options)
+        option = prompt_option()
+
+        try:
+            member_id = actor.member_id
+            if member_id is None:
+                raise service.BusinessError("Cuenta de miembro sin perfil vinculado")
+
+            if option == "1":
+                print_section("My classes")
+                show_class_rows(
+                    service.list_member_classes(member_id),
+                    empty_message="(not enrolled in any class)",
+                )
+                pause()
+
+            elif option == "2":
+                m = service.get_member(member_id)
+                print_section(f"Attendance for [{m.id}] {m.name}")
+                show_attendance_records(
+                    service.list_attendance_by_member(member_id)
+                )
+                pause()
+
+            elif option == "3":
+                enrolled_ids = {
+                    gym_class.id
+                    for gym_class in service.list_member_classes(member_id)
+                }
+                available = [
+                    gym_class
+                    for gym_class in service.list_classes()
+                    if gym_class.id not in enrolled_ids
+                ]
+                class_id = prompt_class_id_from_list(
+                    "Class to enroll in", available
+                )
+                if class_id is None:
+                    pause()
+                    continue
+                service.enroll_member(class_id, member_id, actor=actor)
+                print_success("Enrolled successfully")
+                pause()
+
+            elif option == "4":
+                my_classes = service.list_member_classes(member_id)
+                class_id = prompt_class_id_from_list(
+                    "Class to unenroll from", my_classes
+                )
+                if class_id is None:
+                    pause()
+                    continue
+                service.unenroll_member(class_id, member_id, actor=actor)
+                print_success("Unenrolled successfully")
+                pause()
+
+            elif option == "0":
+                return
+
+            else:
+                print_error("Invalid option.")
+
+        except service.BusinessError as e:
+            print_error(str(e))
+            pause()
+        except ValueError as e:
+            print_error(str(e))
+            pause()
+        except psycopg2.Error as e:
+            print_error(f"Database: {e}")
+            pause()
+
+
+def run_admin_main(actor: AppUser) -> None:
+    main_options = [
+        ("1", "Trainers"),
+        ("2", "Members"),
+        ("3", "Classes"),
+        ("4", "Enrollment"),
+        ("5", "Attendance"),
+        ("6", "Users"),
+        ("0", "Logout"),
+    ]
+
+    while True:
+        clear_screen()
+        print_banner()
+        print_header(f"Admin — {format_user_label(actor)}")
+        print_menu(main_options)
+        option = prompt_option()
+
+        if option == "1":
+            run_trainer_menu()
+        elif option == "2":
+            run_member_menu()
+        elif option == "3":
+            run_class_menu()
+        elif option == "4":
+            run_enrollment_menu()
+        elif option == "5":
+            run_attendance_menu()
+        elif option == "6":
+            run_users_menu(actor)
+        elif option == "0":
+            return
+        else:
+            print_error("Invalid option.")
+            pause()
+
+
 def run_trainer_menu() -> None:
     options = [
         ("1", "Add trainer"),
@@ -1252,38 +1635,25 @@ def run_attendance_menu() -> None:
 def main() -> None:
     init_schema()
 
-    main_options = [
-        ("1", "Trainers"),
-        ("2", "Members"),
-        ("3", "Classes"),
-        ("4", "Enrollment"),
-        ("5", "Attendance"),
-        ("0", "Exit"),
-    ]
-
     while True:
-        clear_screen()
-        print_banner()
-        print_header("Gym Management")
-        print_menu(main_options)
-        option = prompt_option()
+        if service.count_app_users() == 0:
+            run_bootstrap_admin()
+            continue
 
-        if option == "1":
-            run_trainer_menu()
-        elif option == "2":
-            run_member_menu()
-        elif option == "3":
-            run_class_menu()
-        elif option == "4":
-            run_enrollment_menu()
-        elif option == "5":
-            run_attendance_menu()
-        elif option == "0":
+        user = run_login()
+        if user is None:
             print()
             print_success("Goodbye.")
             break
+
+        if user.role == UserRole.ADMIN:
+            run_admin_main(user)
+        elif user.role == UserRole.TRAINER:
+            run_trainer_portal(user)
+        elif user.role == UserRole.MEMBER:
+            run_member_portal(user)
         else:
-            print_error("Invalid option.")
+            print_error("Unsupported role.")
             pause()
 
 

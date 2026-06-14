@@ -5,7 +5,17 @@ from typing import List, Optional
 from psycopg2.extras import RealDictCursor
 
 from db import get_connection
-from models import Trainer, Member, GymClass, ClassSchedule, Enrollment, Attendance, AttendanceRosterRow
+from models import (
+    Trainer,
+    Member,
+    GymClass,
+    ClassSchedule,
+    Enrollment,
+    Attendance,
+    AttendanceRosterRow,
+    AppUser,
+    UserRole,
+)
 
 _TRAINER_COLUMNS = (
     "id, name, email, phone, specialty, bio, years_experience"
@@ -737,4 +747,124 @@ def delete_attendance(class_id: int, member_id: int, attended_at) -> bool:
                 (class_id, member_id, attended_at),
             )
             return cur.rowcount > 0
+
+
+_APP_USER_COLUMNS = (
+    "id, username, role, trainer_id, member_id, active"
+)
+
+
+def _app_user_from_row(row) -> AppUser:
+    return AppUser(
+        id=row["id"],
+        username=row["username"],
+        role=UserRole(row["role"]),
+        trainer_id=row.get("trainer_id"),
+        member_id=row.get("member_id"),
+        active=row["active"],
+    )
+
+
+def count_app_users() -> int:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM app_users")
+            return cur.fetchone()[0]
+
+
+def get_app_user_by_username(username: str) -> Optional[dict]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT id, username, password_hash, role,
+                       trainer_id, member_id, active
+                FROM app_users
+                WHERE username = %s
+                """,
+                (username,),
+            )
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+
+def get_app_user(user_id: int) -> Optional[AppUser]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                f"SELECT {_APP_USER_COLUMNS} FROM app_users WHERE id = %s",
+                (user_id,),
+            )
+            row = cur.fetchone()
+            return _app_user_from_row(row) if row else None
+
+
+def list_app_users() -> List[AppUser]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                f"SELECT {_APP_USER_COLUMNS} FROM app_users ORDER BY id"
+            )
+            rows = cur.fetchall()
+    return [_app_user_from_row(row) for row in rows]
+
+
+def username_taken(username: str, *, exclude_id: int | None = None) -> bool:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            if exclude_id is None:
+                cur.execute(
+                    "SELECT 1 FROM app_users WHERE username = %s LIMIT 1",
+                    (username,),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT 1 FROM app_users
+                    WHERE username = %s AND id <> %s
+                    LIMIT 1
+                    """,
+                    (username, exclude_id),
+                )
+            return cur.fetchone() is not None
+
+
+def create_app_user(
+    username: str,
+    password_hash: str,
+    role: str,
+    *,
+    trainer_id: int | None = None,
+    member_id: int | None = None,
+) -> AppUser:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                INSERT INTO app_users (
+                    username, password_hash, role, trainer_id, member_id
+                )
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id, username, role, trainer_id, member_id, active
+                """,
+                (username, password_hash, role, trainer_id, member_id),
+            )
+            row = cur.fetchone()
+    return _app_user_from_row(row)
+
+
+def set_app_user_active(user_id: int, active: bool) -> Optional[AppUser]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                f"""
+                UPDATE app_users
+                SET active = %s
+                WHERE id = %s
+                RETURNING {_APP_USER_COLUMNS}
+                """,
+                (active, user_id),
+            )
+            row = cur.fetchone()
+    return _app_user_from_row(row) if row else None
 

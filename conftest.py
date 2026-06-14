@@ -16,7 +16,7 @@ _member_counter = itertools.count(1)
 
 TRUNCATE_GYM_TABLES = (
     "TRUNCATE attendance, enrollments, class_schedules, classes, "
-    "members, trainers RESTART IDENTITY CASCADE"
+    "app_users, members, trainers RESTART IDENTITY CASCADE"
 )
 
 
