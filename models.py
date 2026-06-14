@@ -1,6 +1,23 @@
 from dataclasses import dataclass, field
 from datetime import date, datetime, time
 from decimal import Decimal
+from enum import Enum
+
+
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    TRAINER = "trainer"
+    MEMBER = "member"
+
+
+@dataclass
+class AppUser:
+    id: int
+    username: str
+    role: UserRole
+    trainer_id: int | None = None
+    member_id: int | None = None
+    active: bool = True
 
 
 @dataclass

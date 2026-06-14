@@ -25,6 +25,7 @@ def test_seed_data_populates_demo_records():
     assert len(service.list_classes()) == 4
     assert len(service.list_enrollments()) == 7
     assert len(service.list_attendance()) == 3
+    assert service.count_app_users() == 3
 
     fitness = next(c for c in service.list_classes() if c.name == "Fitness")
     assert fitness.trainer_name == "Ana Ruiz"

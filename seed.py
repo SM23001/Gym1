@@ -7,11 +7,12 @@ from decimal import Decimal
 
 from config import get_settings
 from db import get_connection, init_schema
+from models import UserRole
 import service
 
 _TRUNCATE_SQL = (
     "TRUNCATE attendance, enrollments, class_schedules, classes, "
-    "members, trainers RESTART IDENTITY CASCADE"
+    "app_users, members, trainers RESTART IDENTITY CASCADE"
 )
 
 
@@ -153,6 +154,20 @@ def seed_data() -> None:
         session_date=date(2026, 6, 22),
     )
 
+    service.register_app_user("admin", "admin123", UserRole.ADMIN)
+    service.register_app_user(
+        "ana.trainer",
+        "trainer123",
+        UserRole.TRAINER,
+        trainer_id=ana.id,
+    )
+    service.register_app_user(
+        "juan.member",
+        "member123",
+        UserRole.MEMBER,
+        member_id=juan.id,
+    )
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Load demo data into the gym database.")
@@ -185,7 +200,8 @@ def main() -> int:
         f"Seed complete ({settings.db_name}): "
         f"{len(service.list_trainers())} trainers, "
         f"{len(service.list_members())} members, "
-        f"{len(service.list_classes())} classes."
+        f"{len(service.list_classes())} classes, "
+        f"{service.count_app_users()} app users."
     )
     return 0
 

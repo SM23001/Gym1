@@ -79,6 +79,22 @@ def init_schema() -> None:
         attended_at TIMESTAMP NOT NULL DEFAULT NOW(),
         PRIMARY KEY (class_id, member_id, attended_at)
     );
+
+    CREATE TABLE IF NOT EXISTS app_users (
+        id SERIAL PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('admin', 'trainer', 'member')),
+        trainer_id INTEGER REFERENCES trainers(id) ON DELETE SET NULL,
+        member_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        CHECK (
+            (role = 'admin' AND trainer_id IS NULL AND member_id IS NULL) OR
+            (role = 'trainer' AND trainer_id IS NOT NULL AND member_id IS NULL) OR
+            (role = 'member' AND member_id IS NOT NULL AND trainer_id IS NULL)
+        )
+    );
     """
 
     migrations = """
