@@ -805,15 +805,38 @@ def app_user_table_row(user: AppUser) -> list[str]:
     ]
 
 
+def show_app_user_rows(users: list[AppUser]) -> None:
+    print_table(
+        APP_USER_TABLE_HEADERS,
+        [app_user_table_row(user) for user in users],
+    )
+
+
 def show_app_users(actor: AppUser) -> None:
     users = service.list_app_users(actor)
     if not users:
         print_empty("(no users)")
         return
-    print_table(
-        APP_USER_TABLE_HEADERS,
-        [app_user_table_row(user) for user in users],
-    )
+    show_app_user_rows(users)
+
+
+def prompt_app_user_id(
+    action: str,
+    users: list[AppUser],
+    *,
+    empty_message: str = "(no users available)",
+) -> int | None:
+    print_section(action)
+    if not users:
+        print_empty(empty_message)
+        return None
+    show_app_user_rows(users)
+    user_ids = {user.id for user in users}
+    while True:
+        user_id = prompt_int("User id", min_value=1)
+        if user_id in user_ids:
+            return user_id
+        print_error("Invalid user id.")
 
 
 def show_app_user_result(user: AppUser, *, action: str) -> None:
@@ -881,13 +904,37 @@ def run_users_menu(actor: AppUser) -> None:
                 pause()
 
             elif option == "3":
-                user_id = prompt_int("User id to deactivate", min_value=1)
+                users = [
+                    user
+                    for user in service.list_app_users(actor)
+                    if user.active and user.id != actor.id
+                ]
+                user_id = prompt_app_user_id(
+                    "Deactivate user",
+                    users,
+                    empty_message="(no active users to deactivate)",
+                )
+                if user_id is None:
+                    pause()
+                    continue
                 user = service.deactivate_app_user(actor, user_id)
                 show_app_user_result(user, action="User deactivated")
                 pause()
 
             elif option == "4":
-                user_id = prompt_int("User id to activate", min_value=1)
+                users = [
+                    user
+                    for user in service.list_app_users(actor)
+                    if not user.active
+                ]
+                user_id = prompt_app_user_id(
+                    "Activate user",
+                    users,
+                    empty_message="(no inactive users to activate)",
+                )
+                if user_id is None:
+                    pause()
+                    continue
                 user = service.activate_app_user(actor, user_id)
                 show_app_user_result(user, action="User activated")
                 pause()
