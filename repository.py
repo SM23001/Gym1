@@ -442,6 +442,22 @@ def list_classes() -> List[GymClass]:
     return _attach_schedules([_class_from_row(r) for r in rows])
 
 
+def list_classes_by_status(statuses: tuple[str, ...]) -> List[GymClass]:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                f"""
+                SELECT {_CLASS_SELECT}
+                {_CLASS_FROM}
+                WHERE c.status = ANY(%s)
+                {_CLASS_ORDER}
+                """,
+                (list(statuses),),
+            )
+            rows = cur.fetchall()
+    return _attach_schedules([_class_from_row(r) for r in rows])
+
+
 def update_class(
     class_id: int,
     name: str,

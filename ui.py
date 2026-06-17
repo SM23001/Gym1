@@ -84,10 +84,29 @@ def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
 
+GYM_INFO_LINES = (
+    "Hours:     Mon–Fri 6:00–22:00, Sat–Sun 8:00–18:00",
+    "Address:   123 Fitness Ave",
+    "Phone:     +1 (555) 010-GYM",
+    "Email:     info@gym.example.com",
+    "",
+    "Sign in as a member to enroll in classes.",
+)
+
+
 def print_banner() -> None:
     print(c(BANNER, BOLD + BRIGHT_CYAN))
     print(c("  Trainers · Members · Classes · Attendance", YELLOW))
     print()
+
+
+def print_gym_info() -> None:
+    print_section("Gym information")
+    for line in GYM_INFO_LINES:
+        if line:
+            print(f"  {line}")
+        else:
+            print()
 
 
 def print_trainer_banner() -> None:

@@ -22,6 +22,8 @@ DAY_NAMES = (
 )
 
 CLASS_STATUSES = ("scheduled", "started", "ended")
+PUBLIC_CLASS_STATUSES = ("scheduled", "started")
+_PUBLIC_CLASS_STATUS_ORDER = {"started": 0, "scheduled": 1}
 
 ScheduleSlot = tuple[int, time, time]
 
@@ -594,6 +596,17 @@ def format_attendance(record: Attendance) -> str:
 
 def list_classes():
     return repo.list_classes()
+
+
+def list_public_classes():
+    classes = repo.list_classes_by_status(PUBLIC_CLASS_STATUSES)
+    return sorted(
+        classes,
+        key=lambda gym_class: (
+            _PUBLIC_CLASS_STATUS_ORDER.get(gym_class.status, 2),
+            gym_class.name.lower(),
+        ),
+    )
 
 
 def list_classes_by_trainer(trainer_id: int):
