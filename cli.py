@@ -20,6 +20,7 @@ from ui import (
     print_attendance_banner,
     print_empty,
     print_error,
+    print_gym_info,
     print_header,
     print_menu,
     print_section,
@@ -293,6 +294,16 @@ CLASS_TABLE_HEADERS = [
     "End",
 ]
 
+PUBLIC_CLASS_TABLE_HEADERS = [
+    "Name",
+    "Trainer",
+    "Schedule",
+    "Capacity",
+    "Price",
+    "Status",
+    "Period",
+]
+
 
 def class_table_row(gym_class) -> list[str]:
     return [
@@ -326,6 +337,29 @@ def show_class_rows(classes, *, empty_message: str = "(no classes)") -> None:
     print_table(
         CLASS_TABLE_HEADERS,
         [class_table_row(gym_class) for gym_class in classes],
+    )
+
+
+def public_class_table_row(gym_class) -> list[str]:
+    return [
+        gym_class.name,
+        gym_class.trainer_name,
+        format_class_schedule_cell(gym_class),
+        str(gym_class.capacity),
+        service.format_class_price(gym_class),
+        gym_class.status,
+        service.format_class_period(gym_class),
+    ]
+
+
+def show_public_classes() -> None:
+    classes = service.list_public_classes()
+    if not classes:
+        print_empty("(no scheduled or active classes)")
+        return
+    print_table(
+        PUBLIC_CLASS_TABLE_HEADERS,
+        [public_class_table_row(gym_class) for gym_class in classes],
     )
 
 
@@ -702,13 +736,24 @@ def run_login() -> AppUser | None:
     while True:
         clear_screen()
         print_banner()
-        print_header("Login")
+        print_header("Welcome")
         print("  1. Sign in")
+        print("  2. View class schedule")
+        print("  3. Gym information")
         print("  0. Exit")
         option = prompt_option()
 
         if option == "0":
             return None
+        if option == "2":
+            print_section("Scheduled and active classes")
+            show_public_classes()
+            pause()
+            continue
+        if option == "3":
+            print_gym_info()
+            pause()
+            continue
         if option != "1":
             print_error("Invalid option.")
             pause()

@@ -112,3 +112,33 @@ def test_list_valid_session_dates():
         date(2026, 7, 6),
         date(2026, 7, 13),
     ]
+
+
+def test_list_public_classes_excludes_ended_and_sorts_started_first():
+    trainer = create_test_trainer("Coach")
+    ended = service.create_class(
+        "CrossFit",
+        trainer.id,
+        10,
+        [(0, time(9, 0), time(10, 0))],
+        status="ended",
+    )
+    scheduled = service.create_class(
+        "Fitness",
+        trainer.id,
+        20,
+        [(1, time(10, 0), time(11, 0))],
+        status="scheduled",
+    )
+    started = service.create_class(
+        "Spinning",
+        trainer.id,
+        12,
+        [(2, time(7, 0), time(8, 0))],
+        status="started",
+    )
+
+    public = service.list_public_classes()
+
+    assert [gym_class.id for gym_class in public] == [started.id, scheduled.id]
+    assert ended.id not in {gym_class.id for gym_class in public}
