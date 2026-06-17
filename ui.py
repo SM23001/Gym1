@@ -85,10 +85,10 @@ def clear_screen() -> None:
 
 
 GYM_INFO_LINES = (
-    "Hours:     Mon–Fri 6:00–22:00, Sat–Sun 8:00–18:00",
-    "Address:   123 Fitness Ave",
-    "Phone:     +1 (555) 010-GYM",
-    "Email:     info@gym.example.com",
+    "Hours:     Mon–Fri 4:00–22:00, Sat 4:00–18:00",
+    "Address:   Av. 1 April, Neighborhood Los Desamparados San Salvador",
+    "Phone:     +503 4568-1546",
+    "Email:     info@gym.com.sv",
     "",
     "Sign in as a member to enroll in classes.",
 )

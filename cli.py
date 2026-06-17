@@ -737,8 +737,6 @@ def run_login() -> AppUser | None:
         clear_screen()
         print_banner()
         print_header("Welcome")
-        print_section("Scheduled and active classes")
-        show_public_classes()
         print_menu(
             [
                 ("1", "Sign in"),
@@ -746,6 +744,8 @@ def run_login() -> AppUser | None:
                 ("0", "Exit"),
             ]
         )
+        print_section("Scheduled and active classes")
+        show_public_classes()
         option = prompt_option()
 
         if option == "0":
