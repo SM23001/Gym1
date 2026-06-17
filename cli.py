@@ -737,11 +737,12 @@ def run_login() -> AppUser | None:
         clear_screen()
         print_banner()
         print_header("Welcome")
+        print_section("Scheduled and active classes")
+        show_public_classes()
         print_menu(
             [
                 ("1", "Sign in"),
-                ("2", "View class schedule"),
-                ("3", "Gym information"),
+                ("2", "Gym information"),
                 ("0", "Exit"),
             ]
         )
@@ -750,11 +751,6 @@ def run_login() -> AppUser | None:
         if option == "0":
             return None
         if option == "2":
-            print_section("Scheduled and active classes")
-            show_public_classes()
-            pause()
-            continue
-        if option == "3":
             print_gym_info()
             pause()
             continue
