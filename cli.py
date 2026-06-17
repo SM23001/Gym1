@@ -792,6 +792,30 @@ def run_bootstrap_admin() -> None:
     pause()
 
 
+APP_USER_TABLE_HEADERS = ["ID", "Username", "Role", "Status"]
+
+
+def app_user_table_row(user: AppUser) -> list[str]:
+    status = "active" if user.active else "inactive"
+    return [
+        str(user.id),
+        user.username,
+        user.role.value,
+        status,
+    ]
+
+
+def show_app_users(actor: AppUser) -> None:
+    users = service.list_app_users(actor)
+    if not users:
+        print_empty("(no users)")
+        return
+    print_table(
+        APP_USER_TABLE_HEADERS,
+        [app_user_table_row(user) for user in users],
+    )
+
+
 def run_users_menu(actor: AppUser) -> None:
     options = [
         ("1", "List users"),
@@ -810,12 +834,7 @@ def run_users_menu(actor: AppUser) -> None:
         try:
             if option == "1":
                 print_section("App users")
-                users = service.list_app_users(actor)
-                if not users:
-                    print_empty("(no users)")
-                else:
-                    for user in users:
-                        print(f"    {service.format_app_user(user)}")
+                show_app_users(actor)
                 pause()
 
             elif option == "2":
