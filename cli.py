@@ -816,6 +816,19 @@ def show_app_users(actor: AppUser) -> None:
     )
 
 
+def show_app_user_result(user: AppUser, *, action: str) -> None:
+    print_success(action)
+    print_table(APP_USER_TABLE_HEADERS, [app_user_table_row(user)])
+    if user.trainer_id is not None:
+        trainer = service.get_trainer(user.trainer_id)
+        if trainer is not None:
+            print(f"  Linked trainer: [{trainer.id}] {trainer.name}")
+    elif user.member_id is not None:
+        member = service.get_member(user.member_id)
+        if member is not None:
+            print(f"  Linked member: [{member.id}] {member.name}")
+
+
 def run_users_menu(actor: AppUser) -> None:
     options = [
         ("1", "List users"),
@@ -862,19 +875,19 @@ def run_users_menu(actor: AppUser) -> None:
                     trainer_id=trainer_id,
                     member_id=member_id,
                 )
-                print_success(f"User created: {service.format_app_user(user)}")
+                show_app_user_result(user, action="User created")
                 pause()
 
             elif option == "3":
                 user_id = prompt_int("User id to deactivate", min_value=1)
                 user = service.deactivate_app_user(actor, user_id)
-                print_success(f"Deactivated: {service.format_app_user(user)}")
+                show_app_user_result(user, action="User deactivated")
                 pause()
 
             elif option == "4":
                 user_id = prompt_int("User id to activate", min_value=1)
                 user = service.activate_app_user(actor, user_id)
-                print_success(f"Activated: {service.format_app_user(user)}")
+                show_app_user_result(user, action="User activated")
                 pause()
 
             elif option == "0":
