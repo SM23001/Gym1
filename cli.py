@@ -737,10 +737,14 @@ def run_login() -> AppUser | None:
         clear_screen()
         print_banner()
         print_header("Welcome")
-        print("  1. Sign in")
-        print("  2. View class schedule")
-        print("  3. Gym information")
-        print("  0. Exit")
+        print_menu(
+            [
+                ("1", "Sign in"),
+                ("2", "View class schedule"),
+                ("3", "Gym information"),
+                ("0", "Exit"),
+            ]
+        )
         option = prompt_option()
 
         if option == "0":
