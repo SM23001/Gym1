@@ -822,10 +822,12 @@ def show_app_user_result(user: AppUser, *, action: str) -> None:
     if user.trainer_id is not None:
         trainer = service.get_trainer(user.trainer_id)
         if trainer is not None:
+            print()
             print(f"  Linked trainer: [{trainer.id}] {trainer.name}")
     elif user.member_id is not None:
         member = service.get_member(user.member_id)
         if member is not None:
+            print()
             print(f"  Linked member: [{member.id}] {member.name}")
 
 
